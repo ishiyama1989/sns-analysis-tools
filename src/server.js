@@ -1094,9 +1094,14 @@ function generateReportHTML(reportData, year, month) {
 }
 
 // サーバー起動
-app.listen(port, () => {
-  console.log(`SNS Analytics Server running at http://localhost:${port}`);
-});
+const PORT = process.env.PORT || port;
+if (require.main === module) {
+  app.listen(PORT, () => {
+    console.log(`SNS Analytics Server running at http://localhost:${PORT}`);
+  });
+}
+
+module.exports = app;
 
 // アプリケーション終了時のクリーンアップ
 process.on('SIGINT', () => {
