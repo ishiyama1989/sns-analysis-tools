@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>投稿データ一覧 - Instagram運用分析</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>投稿データ一覧</h1>
+      <nav>
+        <a href="/" class="btn btn-link">ホーム</a>
+        <a href="/add-post" class="btn btn-primary">新規投稿追加</a>
+      </nav>
+    </header>
+    
+    <main>
+      <% if (posts && posts.length > 0) { %>
+        <div class="stats-summary">
+          <div class="stat-card">
+            <h3>総投稿数</h3>
+            <span class="stat-number"><%= posts.length %></span>
+          </div>
+          <div class="stat-card">
+            <h3>平均いいね数</h3>
+            <span class="stat-number">
+              <%= Math.round(posts.reduce((sum, post) => sum + (post.likes || 0), 0) / posts.length) %>
+            </span>
+          </div>
+          <div class="stat-card">
+            <h3>総エンゲージメント</h3>
+            <span class="stat-number">
+              <%= posts.reduce((sum, post) => sum + (post.likes || 0) + (post.comments || 0) + (post.saves || 0), 0) %>
+            </span>
+          </div>
+        </div>
+        
+        <div class="table-container">
+          <table class="posts-table">
+            <thead>
+              <tr>
+                <th>投稿日時</th>
+                <th>タイプ</th>
+                <th>キャプション</th>
+                <th>いいね</th>
+                <th>コメント</th>
+                <th>保存</th>
+                <th>リーチ</th>
+                <th>エンゲージメント率</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% posts.forEach(function(post) { 
+                const engagement = (post.likes || 0) + (post.comments || 0) + (post.saves || 0);
+                const engagementRate = post.reach ? ((engagement / post.reach) * 100).toFixed(2) : '-';
+              %>
+                <tr>
+                  <td>
+                    <div class="date-time">
+                      <span class="date"><%= post.post_date %></span>
+                      <span class="time"><%= post.post_time %></span>
+                    </div>
+                  </td>
+                  <td>
+                    <span class="post-type <%= post.post_type %>">
+                      <%= post.post_type === 'image' ? '📷' : post.post_type === 'reel' ? '🎬' : '📖' %>
+                      <%= post.post_type === 'image' ? '画像' : post.post_type === 'reel' ? 'リール' : 'ストーリー' %>
+                    </span>
+                  </td>
+                  <td>
+                    <div class="caption">
+                      <% if (post.caption && post.caption.length > 50) { %>
+                        <%= post.caption.substring(0, 50) %>...
+                      <% } else { %>
+                        <%= post.caption || '-' %>
+                      <% } %>
+                    </div>
+                    <% if (post.hashtags) { %>
+                      <div class="hashtags"><%= post.hashtags %></div>
+                    <% } %>
+                  </td>
+                  <td class="number"><%= post.likes || 0 %></td>
+                  <td class="number"><%= post.comments || 0 %></td>
+                  <td class="number"><%= post.saves || 0 %></td>
+                  <td class="number"><%= post.reach || '-' %></td>
+                  <td class="number">
+                    <% if (engagementRate !== '-') { %>
+                      <span class="engagement-rate"><%= engagementRate %>%</span>
+                    <% } else { %>
+                      -
+                    <% } %>
+                  </td>
+                </tr>
+              <% }); %>
+            </tbody>
+          </table>
+        </div>
+      <% } else { %>
+        <div class="empty-state">
+          <h2>まだ投稿データがありません</h2>
+          <p>最初の投稿データを追加してみましょう</p>
+          <a href="/add-post" class="btn btn-primary">投稿データを追加</a>
+        </div>
+      <% } %>
+    </main>
+  </div>
+</body>
+</html>

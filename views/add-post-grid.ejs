@@ -1,0 +1,987 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>投稿データ入力 - SNS運用代行管理システム</title>
+  <link rel="stylesheet" href="/style.css">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    .grid-container {
+      display: grid;
+      grid-template-columns: 200px repeat(var(--columns, 5), 180px);
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      background: white;
+      position: relative;
+      width: max-content;
+      min-width: 100%;
+    }
+    
+    @media (max-width: 768px) {
+      .grid-container {
+        grid-template-columns: 150px repeat(var(--columns, 5), 140px);
+      }
+    }
+    
+    .row-label {
+      position: sticky;
+      left: 0;
+      background: #f9fafb;
+      padding: 12px 16px;
+      border-right: 2px solid #e5e7eb;
+      font-weight: 600;
+      font-size: 14px;
+      display: flex;
+      align-items: center;
+      z-index: 10;
+    }
+    
+    .cell {
+      padding: 8px 12px;
+      border-right: 1px solid #e5e7eb;
+      border-bottom: 1px solid #e5e7eb;
+      min-height: 50px;
+      display: flex;
+      align-items: center;
+      writing-mode: horizontal-tb;
+      text-orientation: upright;
+      white-space: nowrap;
+    }
+    
+    .cell strong {
+      writing-mode: horizontal-tb;
+      text-orientation: mixed;
+      white-space: normal;
+    }
+    
+    /* 投稿ヘッダーの文字を横向きに */
+    .cell .flex.justify-between.items-center {
+      writing-mode: horizontal-tb;
+      text-orientation: mixed;
+      white-space: normal;
+      width: 100%;
+    }
+    
+    .cell .flex.justify-between.items-center strong {
+      writing-mode: horizontal-tb;
+      text-orientation: mixed;
+      white-space: nowrap;
+    }
+    
+    .cell input, .cell select {
+      width: 100%;
+      border: none;
+      outline: none;
+      padding: 4px;
+      font-size: 13px;
+      background: transparent;
+    }
+    
+    .cell input:focus, .cell select:focus {
+      background: #f0f9ff;
+      border-radius: 4px;
+    }
+    
+    .follower-row { background-color: #e0f2fe; }
+    .reach-row { background-color: #fdf2f8; }
+    .eng-row { background-color: #f0f9ff; }
+    .zebra-odd { background-color: #f9fafb; }
+    .zebra-even { background-color: #ffffff; }
+    
+    .error-cell { border: 2px solid #ef4444 !important; background-color: #fef2f2; }
+    .warning-cell { border: 2px solid #f59e0b !important; background-color: #fefbf0; }
+    
+    .summary-bar {
+      margin-top: 20px;
+      padding: 16px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border-radius: 8px;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 16px;
+    }
+    
+    .summary-item {
+      text-align: center;
+    }
+    
+    .summary-item .label {
+      font-size: 12px;
+      opacity: 0.8;
+      margin-bottom: 4px;
+    }
+    
+    .summary-item .value {
+      font-size: 18px;
+      font-weight: bold;
+    }
+    
+    .toolbar {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+    
+    .btn {
+      padding: 8px 16px;
+      border-radius: 6px;
+      border: none;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    
+    .btn-primary { background: #3b82f6; color: white; }
+    .btn-primary:hover { background: #2563eb; }
+    .btn-success { background: #10b981; color: white; }
+    .btn-success:hover { background: #059669; }
+    .btn-danger { background: #ef4444; color: white; }
+    .btn-danger:hover { background: #dc2626; }
+    .btn-secondary { background: #6b7280; color: white; }
+    .btn-secondary:hover { background: #4b5563; }
+    
+    .file-input {
+      position: relative;
+      overflow: hidden;
+      display: inline-block;
+    }
+    
+    .file-input input[type=file] {
+      position: absolute;
+      left: -9999px;
+    }
+    
+    .image-preview {
+      width: 40px;
+      height: 40px;
+      object-fit: cover;
+      border-radius: 4px;
+      border: 1px solid #e5e7eb;
+    }
+
+    .post-title-input {
+      min-width: 80px;
+      max-width: 120px;
+    }
+
+    .post-title-input:focus {
+      background: #f0f9ff !important;
+      border: 1px solid #3b82f6 !important;
+    }
+
+    .delete-btn {
+      writing-mode: horizontal-tb;
+      text-orientation: mixed;
+      white-space: nowrap;
+      font-size: 12px;
+      padding: 2px 4px;
+      border-radius: 3px;
+      background: #fee2e2;
+      border: 1px solid #fecaca;
+      min-width: auto;
+    }
+
+    .delete-btn:hover {
+      background: #fecaca;
+    }
+  </style>
+</head>
+<body>
+  <div class="container mx-auto px-4 py-6">
+    <header class="mb-6">
+      <h1 class="text-3xl font-bold text-gray-800 mb-4">SNS投稿データ入力 - <%= company %> - <%= year %>年<%= month %>月</h1>
+      
+      <!-- 会社・月選択 -->  
+      <div class="month-selector mb-4 p-6 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border border-blue-200 shadow-sm">
+        <h3 class="text-lg font-bold mb-4 text-gray-800">📋 対象クライアント・月選択</h3>
+        
+        <!-- クライアント選択 -->
+        <div class="mb-4">
+          <label for="companySelect" class="block text-sm font-semibold text-gray-700 mb-2">🏢 クライアント</label>
+          <div class="flex gap-3 items-center">
+            <select id="companySelect" class="flex-1 px-4 py-3 text-base text-gray-900 border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 bg-white shadow-sm transition-all">
+              <!-- 動的に生成 -->
+            </select>
+            <a href="/companies/add" class="px-4 py-3 bg-gray-600 hover:bg-gray-700 text-white text-sm font-medium rounded-lg transition-colors">+ 新規登録</a>
+          </div>
+        </div>
+        
+        <!-- 年月選択 -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+          <div>
+            <label for="yearSelect" class="block text-sm font-semibold text-gray-700 mb-2">📅 年</label>
+            <select id="yearSelect" class="w-full px-4 py-3 text-base text-gray-900 font-medium border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 bg-white shadow-sm transition-all">
+              <% for(let y = 2020; y <= new Date().getFullYear() + 1; y++) { %>
+                <option value="<%= y %>" <%= y === year ? 'selected' : '' %>><%= y %>年</option>
+              <% } %>
+            </select>
+          </div>
+          <div>
+            <label for="monthSelect" class="block text-sm font-semibold text-gray-700 mb-2">📆 月</label>
+            <select id="monthSelect" class="w-full px-4 py-3 text-base text-gray-900 font-medium border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 bg-white shadow-sm transition-all">
+              <% for(let m = 1; m <= 12; m++) { %>
+                <option value="<%= m %>" <%= m === month ? 'selected' : '' %>><%= m %>月</option>
+              <% } %>
+            </select>
+          </div>
+          <div>
+            <button id="changeMonth" class="w-full px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg shadow-md hover:shadow-lg transition-all duration-200 transform hover:scale-105">
+              🔄 データを表示
+            </button>
+          </div>
+        </div>
+      </div>
+      <!-- ナビゲーション -->
+      <nav class="mb-6">
+        <div class="flex items-center justify-between p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border border-blue-200 shadow-sm">
+          <div class="flex items-center gap-3">
+            <a href="/" class="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition-all duration-200 shadow-md hover:shadow-lg transform hover:scale-105">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path>
+              </svg>
+              🏠 ホームに戻る
+            </a>
+            <a href="#" onclick="navigateToAnalytics()" class="inline-flex items-center gap-2 px-4 py-2 bg-green-600 text-white font-semibold rounded-lg hover:bg-green-700 transition-all duration-200 shadow-md hover:shadow-lg transform hover:scale-105">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 00-2-2m0 0h2m-6 0h6"></path>
+              </svg>
+              📈 分析を見る
+            </a>
+            <a href="#" onclick="navigateToReport()" class="inline-flex items-center gap-2 px-4 py-2 bg-purple-600 text-white font-semibold rounded-lg hover:bg-purple-700 transition-all duration-200 shadow-md hover:shadow-lg transform hover:scale-105">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+              </svg>
+              📋 レポート
+            </a>
+            <div class="flex items-center gap-2 text-gray-600">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+              </svg>
+              <span class="font-medium">📊 データ入力</span>
+            </div>
+          </div>
+          <div class="text-sm text-gray-500 font-medium">
+            <%= company %> - <%= year %>年<%= month %>月
+          </div>
+        </div>
+      </nav>
+      
+      <!-- ツールバー -->
+      <div class="toolbar">
+        <button id="addColumn" class="btn btn-primary">+ 投稿を追加</button>
+        <button id="deleteSelected" class="btn btn-danger">選択した投稿を削除</button>
+        <button id="csvExport" class="btn btn-success">CSV エクスポート</button>
+        <button id="seedData" class="btn btn-secondary">ダミーデータ投入</button>
+        <button id="saveData" class="btn btn-primary">データ保存</button>
+      </div>
+    </header>
+    
+    <!-- グリッド -->
+    <div class="w-full overflow-x-auto overflow-y-visible" style="max-width: 100vw;">
+      <div id="dataGrid" class="grid-container" style="min-width: fit-content; width: max-content;">
+        <!-- グリッドはJavaScriptで動的生成 -->
+      </div>
+    </div>
+    
+    <!-- サマリーバー -->
+    <div id="summaryBar" class="summary-bar">
+      <!-- サマリーはJavaScriptで動的生成 -->
+    </div>
+  </div>
+
+  <script>
+    class PostDataGrid {
+      constructor() {
+        this.posts = [];
+        this.selectedColumn = -1;
+        this.selectedPosts = new Set(); // 選択された投稿のIDを管理
+        
+        this.rowLabels = [
+          { key: 'date', label: '日付', type: 'date' },
+          { key: 'postType', label: '投稿タイプ', type: 'select', options: ['フィード', 'リール', 'ストーリーズ'] },
+          { key: 'genre', label: 'ジャンル', type: 'select', options: ['商品紹介', 'お店紹介', '人物', 'イベント告知'] },
+          { key: 'imageUrl', label: '投稿画像', type: 'url' },
+          { key: 'likes', label: 'いいね数', type: 'number' },
+          { key: 'saves', label: '保存数', type: 'number' },
+          { key: 'newFollowers', label: '新しいフォロワー', type: 'number', class: 'follower-row' },
+          { key: 'reachTotal', label: 'リーチ数（合計）', type: 'number', class: 'reach-row' },
+          { key: 'reachFollower', label: 'フォロワーのリーチ数', type: 'number', class: 'reach-row' },
+          { key: 'reachNonFollower', label: '非フォロワーのリーチ数', type: 'number', class: 'reach-row' },
+          { key: 'engTotal', label: 'ENG数（合計=自動）', type: 'number', readonly: true, class: 'eng-row' },
+          { key: 'engFollower', label: 'フォロワーのENG数', type: 'number', class: 'eng-row' },
+          { key: 'engNonFollower', label: '非フォロワーのENG数', type: 'number', class: 'eng-row' }
+        ];
+        
+        this.initEventListeners();
+        this.init();
+      }
+      
+      async init() {
+        await this.loadData();
+        this.render();
+      }
+      
+      initEventListeners() {
+        document.getElementById('addColumn').addEventListener('click', () => this.addPost());
+        // Removed delete column and CSV import functionality
+        document.getElementById('deleteSelected').addEventListener('click', () => this.deleteSelectedPosts());
+        document.getElementById('csvExport').addEventListener('click', () => this.exportCSV());
+        document.getElementById('seedData').addEventListener('click', () => this.seedData());
+        document.getElementById('saveData').addEventListener('click', () => this.saveData());
+        document.getElementById('changeMonth').addEventListener('click', () => this.changeMonth());
+      }
+      
+      generateId() {
+        return 'post_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+      }
+      
+      addPost(data = null) {
+        const newPost = data || {
+          id: this.generateId(),
+          title: '',
+          date: new Date().toISOString().split('T')[0],
+          postType: 'フィード',
+          genre: '人物',
+          imageUrl: '',
+          likes: 0,
+          saves: 0,
+          newFollowers: 0,
+          reachTotal: 0,
+          reachFollower: 0,
+          reachNonFollower: 0,
+          engFollower: 0,
+          engNonFollower: 0
+        };
+        
+        newPost.engTotal = newPost.engFollower + newPost.engNonFollower;
+        this.posts.push(newPost);
+        this.saveToStorage();
+        this.render();
+      }
+      
+      deletePost() {
+        if (this.selectedColumn >= 0 && this.selectedColumn < this.posts.length) {
+          this.posts.splice(this.selectedColumn, 1);
+          this.selectedColumn = -1;
+          this.saveToStorage();
+          this.render();
+        }
+      }
+      
+      updatePost(index, key, value) {
+        if (index >= 0 && index < this.posts.length) {
+          // 数値の場合は確実に数値として保存
+          if (['likes', 'saves', 'newFollowers', 'reachTotal', 'reachFollower', 'reachNonFollower', 'engFollower', 'engNonFollower'].includes(key)) {
+            this.posts[index][key] = parseInt(value) || 0;
+          } else {
+            this.posts[index][key] = value;
+          }
+          
+          // 自動計算
+          if (key === 'engFollower' || key === 'engNonFollower') {
+            this.posts[index].engTotal = 
+              (parseInt(this.posts[index].engFollower) || 0) + 
+              (parseInt(this.posts[index].engNonFollower) || 0);
+          }
+          
+          this.saveToStorage();
+          this.updateSummary();
+          this.validateData();
+        }
+      }
+      
+      validateData() {
+        this.posts.forEach((post, index) => {
+          const reachTotal = parseInt(post.reachTotal) || 0;
+          const reachSum = (parseInt(post.reachFollower) || 0) + (parseInt(post.reachNonFollower) || 0);
+          const engTotal = (parseInt(post.engFollower) || 0) + (parseInt(post.engNonFollower) || 0);
+          const likeSaveSum = (parseInt(post.likes) || 0) + (parseInt(post.saves) || 0);
+          
+          // リーチ数の整合性チェック
+          const reachCells = document.querySelectorAll(`[data-row="6"][data-col="${index}"], [data-row="7"][data-col="${index}"], [data-row="8"][data-col="${index}"]`);
+          reachCells.forEach(cell => {
+            if (reachTotal !== reachSum) {
+              cell.classList.add('error-cell');
+            } else {
+              cell.classList.remove('error-cell');
+            }
+          });
+          
+          // エンゲージメントの妥当性チェック
+          const engCells = document.querySelectorAll(`[data-row="10"][data-col="${index}"], [data-row="11"][data-col="${index}"]`);
+          engCells.forEach(cell => {
+            if (Math.abs(engTotal - likeSaveSum) > likeSaveSum * 0.5) {
+              cell.classList.add('warning-cell');
+            } else {
+              cell.classList.remove('warning-cell');
+            }
+          });
+        });
+      }
+      
+      render() {
+        const grid = document.getElementById('dataGrid');
+        grid.innerHTML = '';
+        
+        // CSS変数で列数を設定
+        grid.style.setProperty('--columns', this.posts.length);
+        
+        // ヘッダー行（項目タイトル）
+        const headerRow = document.createElement('div');
+        headerRow.className = 'row-label';
+        headerRow.textContent = '項目';
+        grid.appendChild(headerRow);
+        
+        this.posts.forEach((post, index) => {
+          const cell = document.createElement('div');
+          cell.className = `cell cursor-pointer ${this.selectedColumn === index ? 'bg-blue-100' : ''}`;
+          cell.innerHTML = `
+            <div class="flex justify-between items-center">
+              <div class="flex items-center">
+                <input type="checkbox" class="post-checkbox mr-2" data-post-id="${post.id}" ${this.selectedPosts.has(post.id) ? 'checked' : ''}>
+                <input type="text" class="post-title-input font-bold bg-transparent border-none outline-none p-1 rounded" value="${post.title || '投稿' + (index + 1)}" placeholder="投稿${index + 1}" data-post-index="${index}">
+              </div>
+              <button class="delete-btn text-red-600 hover:text-red-800 ml-2" onclick="grid.deletePost(${index})" title="削除">削除</button>
+            </div>
+          `;
+          
+          // チェックボックスのイベントリスナーを追加
+          const checkbox = cell.querySelector('.post-checkbox');
+          checkbox.addEventListener('change', (e) => {
+            if (e.target.checked) {
+              this.selectedPosts.add(post.id);
+            } else {
+              this.selectedPosts.delete(post.id);
+            }
+            e.stopPropagation(); // セル選択を防ぐ
+          });
+
+          // 投稿名編集のイベントリスナーを追加
+          const titleInput = cell.querySelector('.post-title-input');
+          titleInput.addEventListener('input', (e) => {
+            this.updatePost(index, 'title', e.target.value);
+            e.stopPropagation();
+          });
+          titleInput.addEventListener('focus', (e) => e.stopPropagation());
+          titleInput.addEventListener('blur', (e) => e.stopPropagation());
+
+          cell.addEventListener('click', (e) => {
+            if (!e.target.classList.contains('delete-btn') && 
+                !e.target.classList.contains('post-checkbox') && 
+                !e.target.classList.contains('post-title-input')) {
+              this.selectedColumn = this.selectedColumn === index ? -1 : index;
+              this.render();
+            }
+          });
+          grid.appendChild(cell);
+        });
+        
+        // データ行
+        this.rowLabels.forEach((row, rowIndex) => {
+          // 行ラベル
+          const label = document.createElement('div');
+          label.className = `row-label ${row.class || ''}`;
+          label.textContent = row.label;
+          grid.appendChild(label);
+          
+          // データセル
+          this.posts.forEach((post, colIndex) => {
+            const cell = document.createElement('div');
+            const isZebra = !row.class;
+            const zebraClass = isZebra ? (rowIndex % 2 === 0 ? 'zebra-even' : 'zebra-odd') : '';
+            cell.className = `cell ${row.class || zebraClass}`;
+            cell.setAttribute('data-row', rowIndex.toString());
+            cell.setAttribute('data-col', colIndex.toString());
+            
+            if (row.key === 'no') {
+              cell.textContent = (colIndex + 1).toString();
+            } else if (row.key === 'imageUrl') {
+              cell.innerHTML = post[row.key] ? 
+                `<img src="${post[row.key]}" class="image-preview" onerror="this.style.display='none'">` : 
+                '<input type="url" placeholder="画像URL">';
+            } else if (row.type === 'select') {
+              const select = document.createElement('select');
+              row.options.forEach(option => {
+                const opt = document.createElement('option');
+                opt.value = option;
+                opt.textContent = option;
+                opt.selected = post[row.key] === option;
+                select.appendChild(opt);
+              });
+              if (!row.readonly) {
+                select.addEventListener('change', (e) => this.updatePost(colIndex, row.key, e.target.value));
+              }
+              cell.appendChild(select);
+            } else if (row.type === 'checkbox') {
+              // チェックボックスの処理は上記で既に実装済み
+            } else {
+              const input = document.createElement('input');
+              input.type = row.type;
+              input.value = post[row.key] || '';
+              input.readOnly = row.readonly;
+              if (!row.readonly) {
+                input.addEventListener('input', (e) => this.updatePost(colIndex, row.key, e.target.value));
+                input.addEventListener('keydown', (e) => this.handleKeyNavigation(e, rowIndex, colIndex));
+              }
+              cell.appendChild(input);
+            }
+            
+            grid.appendChild(cell);
+          });
+        });
+        
+        this.updateSummary();
+        setTimeout(() => this.validateData(), 100);
+      }
+      
+      handleKeyNavigation(e, row, col) {
+        if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
+          e.preventDefault();
+          let newRow = row, newCol = col;
+          
+          switch (e.key) {
+            case 'ArrowUp': newRow = Math.max(0, row - 1); break;
+            case 'ArrowDown': newRow = Math.min(this.rowLabels.length - 1, row + 1); break;
+            case 'ArrowLeft': newCol = Math.max(0, col - 1); break;
+            case 'ArrowRight': newCol = Math.min(this.posts.length - 1, col + 1); break;
+          }
+          
+          const targetCell = document.querySelector(`[data-row="${newRow}"][data-col="${newCol}"] input`);
+          if (targetCell && !targetCell.readOnly) {
+            targetCell.focus();
+          }
+        }
+      }
+      
+      updateSummary() {
+        const summaryBar = document.getElementById('summaryBar');
+        if (this.posts.length === 0) {
+          summaryBar.innerHTML = '<div class="text-center">データがありません</div>';
+          return;
+        }
+        
+        const totals = {
+          posts: this.posts.length,
+          likes: this.posts.reduce((sum, p) => {
+            const value = parseInt(p.likes);
+            return sum + (isNaN(value) ? 0 : value);
+          }, 0),
+          saves: this.posts.reduce((sum, p) => {
+            const value = parseInt(p.saves);
+            return sum + (isNaN(value) ? 0 : value);
+          }, 0),
+          newFollowers: this.posts.reduce((sum, p) => {
+            const value = parseInt(p.newFollowers);
+            return sum + (isNaN(value) ? 0 : value);
+          }, 0),
+          reachTotal: this.posts.reduce((sum, p) => {
+            const value = parseInt(p.reachTotal);
+            return sum + (isNaN(value) ? 0 : value);
+          }, 0),
+          engTotal: this.posts.reduce((sum, p) => {
+            const engFollower = parseInt(p.engFollower);
+            const engNonFollower = parseInt(p.engNonFollower);
+            return sum + (isNaN(engFollower) ? 0 : engFollower) + (isNaN(engNonFollower) ? 0 : engNonFollower);
+          }, 0)
+        };
+
+        // デバッグ用: 集計内容をコンソールに出力
+        console.log('集計データ:', totals);
+        console.log('投稿データ:', this.posts);
+        
+        summaryBar.innerHTML = `
+          <div class="summary-item">
+            <div class="label">投稿数</div>
+            <div class="value">${totals.posts}</div>
+          </div>
+          <div class="summary-item">
+            <div class="label">いいね合計</div>
+            <div class="value">${totals.likes.toLocaleString()}</div>
+          </div>
+          <div class="summary-item">
+            <div class="label">保存合計</div>
+            <div class="value">${totals.saves.toLocaleString()}</div>
+          </div>
+          <div class="summary-item">
+            <div class="label">新フォロワー合計</div>
+            <div class="value">${totals.newFollowers.toLocaleString()}</div>
+          </div>
+          <div class="summary-item">
+            <div class="label">リーチ合計</div>
+            <div class="value">${totals.reachTotal.toLocaleString()}</div>
+          </div>
+          <div class="summary-item">
+            <div class="label">ENG合計</div>
+            <div class="value">${totals.engTotal.toLocaleString()}</div>
+          </div>
+          <div class="summary-item">
+            <div class="label">平均いいね</div>
+            <div class="value">${totals.posts > 0 ? Math.round(totals.likes / totals.posts).toLocaleString() : '0'}</div>
+          </div>
+        `;
+      }
+      
+      seedData() {
+        if (this.posts.length > 0) {
+          if (!confirm('既存のデータがあります。サンプルデータで上書きしますか？')) {
+            return;
+          }
+        }
+
+        const seedPosts = [
+          { date: '2025-08-01', genre: '人物', likes: 1000, saves: 100, newFollowers: 5, reachTotal: 15000, reachFollower: 10000, reachNonFollower: 5000, engFollower: 800, engNonFollower: 300 },
+          { date: '2025-08-04', genre: '物撮り', likes: 1000, saves: 100, newFollowers: 2, reachTotal: 15000, reachFollower: 10000, reachNonFollower: 5000, engFollower: 800, engNonFollower: 300 },
+          { date: '2025-08-07', genre: 'CP', likes: 1000, saves: 100, newFollowers: 8, reachTotal: 15000, reachFollower: 10000, reachNonFollower: 5000, engFollower: 800, engNonFollower: 300 },
+          { date: '2025-08-10', genre: 'その他', likes: 1000, saves: 100, newFollowers: 3, reachTotal: 15000, reachFollower: 10000, reachNonFollower: 5000, engFollower: 800, engNonFollower: 300 },
+          { date: '2025-08-13', genre: '人物', likes: 1000, saves: 100, newFollowers: 4, reachTotal: 15000, reachFollower: 10000, reachNonFollower: 5000, engFollower: 800, engNonFollower: 300 },
+          { date: '2025-08-16', genre: '物撮り', likes: 1000, saves: 100, newFollowers: 6, reachTotal: 15000, reachFollower: 10000, reachNonFollower: 5000, engFollower: 800, engNonFollower: 300 }
+        ];
+        
+        // 現在の月に合わせて日付を調整
+        const currentYear = document.getElementById('yearSelect').value;
+        const currentMonth = document.getElementById('monthSelect').value.padStart(2, '0');
+        
+        this.posts = [];
+        seedPosts.forEach((postData) => {
+          const newPost = {
+            id: this.generateId(),
+            imageUrl: '',
+            ...postData,
+            engTotal: postData.engFollower + postData.engNonFollower
+          };
+          // 日付を現在の年月に変更（日は元のまま保持）
+          const originalDay = newPost.date.split('-')[2];
+          newPost.date = `${currentYear}-${currentMonth}-${originalDay}`;
+          this.posts.push(newPost);
+        });
+        
+        this.saveToStorage();
+        this.render();
+        this.updateSummary();
+      }
+      
+      importCSV(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+        
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          const csv = e.target.result;
+          const lines = csv.split('\n').filter(line => line.trim());
+          const headers = lines[0].split(',').map(h => h.trim());
+          
+          this.posts = [];
+          
+          for (let i = 1; i < lines.length; i++) {
+            const values = lines[i].split(',').map(v => v.trim());
+            const post = {
+              id: this.generateId(),
+              date: values[0] || new Date().toISOString().split('T')[0],
+              postType: values[1] || 'フィード',
+              genre: values[2] || '人物',
+              imageUrl: values[2] || '',
+              likes: parseInt(values[3]) || 0,
+              saves: parseInt(values[4]) || 0,
+              reachTotal: parseInt(values[5]) || 0,
+              reachFollower: parseInt(values[6]) || 0,
+              reachNonFollower: parseInt(values[7]) || 0,
+              engFollower: parseInt(values[8]) || 0,
+              engNonFollower: parseInt(values[9]) || 0
+            };
+            post.engTotal = post.engFollower + post.engNonFollower;
+            this.posts.push(post);
+          }
+          
+          this.saveToStorage();
+          this.render();
+        };
+        reader.readAsText(file);
+      }
+      
+      exportCSV() {
+        const headers = ['date', 'genre', 'imageUrl', 'likes', 'saves', 'reachTotal', 'reachFollower', 'reachNonFollower', 'engFollower', 'engNonFollower', 'engTotal'];
+        const csvContent = [
+          headers.join(','),
+          ...this.posts.map(post => headers.map(h => post[h] || '').join(','))
+        ].join('\n');
+        
+        this.downloadFile(csvContent, 'posts-data.csv', 'text/csv');
+      }
+      
+      exportJSON() {
+        const jsonContent = JSON.stringify(this.posts, null, 2);
+        this.downloadFile(jsonContent, 'posts-data.json', 'application/json');
+      }
+      
+      downloadFile(content, filename, type) {
+        const blob = new Blob([content], { type });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        a.click();
+        URL.revokeObjectURL(url);
+      }
+      
+      saveToStorage() {
+        const year = document.getElementById('yearSelect').value;
+        const month = document.getElementById('monthSelect').value;
+        const company = document.getElementById('companySelect').value;
+        const storageKey = `postGridData_${company}_${year}_${month}`;
+        localStorage.setItem(storageKey, JSON.stringify(this.posts));
+      }
+      
+      async loadData() {
+        // 現在の年月・会社を取得
+        const year = document.getElementById('yearSelect').value;
+        const month = document.getElementById('monthSelect').value;
+        const company = document.getElementById('companySelect').value;
+        
+        if (!company || company === '') {
+          console.warn('企業が選択されていません');
+          this.posts = [];
+          return;
+        }
+        
+        const storageKey = `postGridData_${company}_${year}_${month}`;
+        console.log('データ読み込み - 企業:', company, '年月:', year, month);
+        
+        // まずサーバーからデータを取得
+        try {
+          const response = await fetch(`/api/posts-grid?year=${year}&month=${month}&company=${company}`);
+          if (response.ok) {
+            const serverData = await response.json();
+            if (serverData.length > 0) {
+              // サーバーデータの数値を確実に数値として変換
+              this.posts = serverData.map(post => ({
+                id: post.id,
+                title: post.title || '',
+                company: post.company,
+                date: post.date,
+                genre: post.genre,
+                imageUrl: post.imageUrl || post.image_url || '',
+                likes: parseInt(post.likes) || 0,
+                saves: parseInt(post.saves) || 0,
+                newFollowers: parseInt(post.newFollowers || post.new_followers) || 0,
+                reachTotal: parseInt(post.reachTotal || post.reach_total) || 0,
+                reachFollower: parseInt(post.reachFollower || post.reach_follower) || 0,
+                reachNonFollower: parseInt(post.reachNonFollower || post.reach_non_follower) || 0,
+                engFollower: parseInt(post.engFollower || post.eng_follower) || 0,
+                engNonFollower: parseInt(post.engNonFollower || post.eng_non_follower) || 0,
+                engTotal: (parseInt(post.engFollower || post.eng_follower) || 0) + (parseInt(post.engNonFollower || post.eng_non_follower) || 0)
+              }));
+              localStorage.setItem(storageKey, JSON.stringify(this.posts));
+              return;
+            }
+          }
+        } catch (error) {
+          console.log('サーバーデータの読み込みに失敗、ローカルストレージから復元します');
+        }
+        
+        // サーバーデータがない場合はローカルストレージから
+        const saved = localStorage.getItem(storageKey);
+        if (saved) {
+          const parsedData = JSON.parse(saved);
+          // ローカルストレージデータの数値も確実に数値として変換
+          this.posts = parsedData.map(post => ({
+            ...post,
+            title: post.title || '',
+            likes: parseInt(post.likes) || 0,
+            saves: parseInt(post.saves) || 0,
+            newFollowers: parseInt(post.newFollowers) || 0,
+            reachTotal: parseInt(post.reachTotal) || 0,
+            reachFollower: parseInt(post.reachFollower) || 0,
+            reachNonFollower: parseInt(post.reachNonFollower) || 0,
+            engFollower: parseInt(post.engFollower) || 0,
+            engNonFollower: parseInt(post.engNonFollower) || 0,
+            engTotal: (parseInt(post.engFollower) || 0) + (parseInt(post.engNonFollower) || 0)
+          }));
+        } else {
+          this.posts = [];
+        }
+      }
+      
+      async saveData() {
+        try {
+          const company = document.getElementById('companySelect').value;
+          if (!company || company === '') {
+            alert('企業を選択してください');
+            return;
+          }
+          
+          console.log('データ保存開始 - 企業:', company, '投稿数:', this.posts.length);
+          const postsWithCompany = this.posts.map(post => ({ ...post, company }));
+          
+          const response = await fetch('/api/posts-grid', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(postsWithCompany)
+          });
+          
+          if (response.ok) {
+            const result = await response.json();
+            alert(`${company}のデータが正常に保存されました！\n保存件数: ${result.count}件`);
+            // 保存後にサーバーから最新データを再読み込み
+            await this.loadData();
+            this.render();
+            this.updateSummary();
+          } else {
+            const error = await response.json();
+            throw new Error(error.error || '保存に失敗しました');
+          }
+        } catch (error) {
+          alert('保存エラー: ' + error.message);
+        }
+      }
+      
+      async deletePost(index) {
+        if (!confirm(`投稿${index + 1}を削除しますか？この操作は元に戻せません。`)) {
+          return;
+        }
+        
+        const post = this.posts[index];
+        
+        // サーバーからも削除
+        if (post.id) {
+          try {
+            const response = await fetch(`/api/posts-grid/${post.id}`, {
+              method: 'DELETE'
+            });
+            
+            if (!response.ok) {
+              throw new Error('サーバーからの削除に失敗しました');
+            }
+          } catch (error) {
+            alert('削除エラー: ' + error.message);
+            return;
+          }
+        }
+        
+        // ローカルからも削除
+        this.posts.splice(index, 1);
+        this.saveToStorage();
+        this.render();
+        this.updateSummary();
+        
+        alert('投稿を削除しました');
+      }
+      
+      async deleteSelectedPosts() {
+        if (this.selectedPosts.size === 0) {
+          alert('削除する投稿を選択してください');
+          return;
+        }
+        
+        if (!confirm(`選択した${this.selectedPosts.size}件の投稿を削除しますか？この操作は元に戻せません。`)) {
+          return;
+        }
+        
+        const selectedIds = Array.from(this.selectedPosts);
+        let successCount = 0;
+        let errorCount = 0;
+        
+        for (const postId of selectedIds) {
+          try {
+            if (postId && postId !== 'undefined') {
+              const response = await fetch(`/api/posts-grid/${postId}`, {
+                method: 'DELETE'
+              });
+              
+              if (!response.ok) {
+                throw new Error('サーバーからの削除に失敗しました');
+              }
+            }
+            successCount++;
+          } catch (error) {
+            console.error('削除エラー:', error);
+            errorCount++;
+          }
+        }
+        
+        // ローカルからも削除
+        this.posts = this.posts.filter(post => !this.selectedPosts.has(post.id));
+        this.selectedPosts.clear(); // 選択をクリア
+        
+        this.saveToStorage();
+        this.render();
+        this.updateSummary();
+        
+        if (errorCount === 0) {
+          alert(`${successCount}件の投稿を削除しました`);
+        } else {
+          alert(`${successCount}件削除完了、${errorCount}件でエラーが発生しました`);
+        }
+      }
+      
+      changeMonth() {
+        const year = document.getElementById('yearSelect').value;
+        const month = document.getElementById('monthSelect').value;
+        const company = document.getElementById('companySelect').value;
+        window.location.href = `/add-post-grid?year=${year}&month=${month}&company=${company}`;
+      }
+    }
+    
+    // グローバル変数として grid を設定
+    let grid;
+    
+    // 初期化
+    document.addEventListener('DOMContentLoaded', async () => {
+      // まず会社リストを読み込む
+      await loadCompanyList();
+      grid = new PostDataGrid();
+    });
+    
+    // 会社リストを読み込んでセレクトボックスに設定
+    async function loadCompanyList() {
+      try {
+        const response = await fetch('/api/companies');
+        const companies = await response.json();
+        
+        const companySelect = document.getElementById('companySelect');
+        companySelect.innerHTML = '<option value="">-- 企業を選択してください --</option>';
+        
+        companies.forEach(company => {
+          const option = document.createElement('option');
+          option.value = company.id;
+          option.textContent = company.company_name;
+          option.selected = company.id === '<%= company %>';
+          companySelect.appendChild(option);
+        });
+
+        // 企業変更時にデータを再読み込み
+        companySelect.addEventListener('change', async function() {
+          const selectedCompany = this.value;
+          if (selectedCompany) {
+            console.log('企業変更:', selectedCompany);
+            await grid.loadData();
+            grid.render();
+          }
+        });
+      } catch (error) {
+        console.error('会社リストの読み込みに失敗:', error);
+      }
+    }
+    
+    // 分析ページへのナビゲーション
+    function navigateToAnalytics() {
+      const company = document.getElementById('companySelect').value;
+      const year = document.getElementById('yearSelect').value;
+      const month = document.getElementById('monthSelect').value;
+      window.location.href = `/analytics?company=${company}&year=${year}&month=${month}`;
+    }
+
+    // レポートページへのナビゲーション
+    function navigateToReport() {
+      const company = document.getElementById('companySelect').value;
+      const year = document.getElementById('yearSelect').value;
+      const month = document.getElementById('monthSelect').value;
+      window.location.href = `/report/${company}?year=${year}&month=${month}`;
+    }
+  </script>
+</body>
+</html>

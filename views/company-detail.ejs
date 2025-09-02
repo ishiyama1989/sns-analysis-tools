@@ -1,0 +1,521 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title><%= company.company_name %> - SNS運用代行管理システム</title>
+  <link rel="stylesheet" href="/style.css">
+  <style>
+    body {
+      background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+      min-height: 100vh;
+      margin: 0;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+
+    .hero-section {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 10px 20px;
+      border-radius: 12px;
+      margin-bottom: 20px;
+      box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
+      text-align: center;
+    }
+
+    .company-title {
+      font-size: 1.8rem;
+      margin-bottom: 3px;
+      font-weight: bold;
+    }
+
+    .company-industry {
+      font-size: 0.85rem;
+      opacity: 0.9;
+      margin-bottom: 8px;
+    }
+
+    .company-id {
+      background: rgba(255, 255, 255, 0.2);
+      padding: 4px 10px;
+      border-radius: 12px;
+      font-size: 0.75rem;
+      display: inline-block;
+    }
+
+    .dashboard-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 25px;
+      margin-bottom: 30px;
+    }
+
+    .dashboard-card {
+      background: linear-gradient(145deg, #ffffff 0%, #f8fafc 100%);
+      border-radius: 20px;
+      padding: 25px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
+      border: 1px solid rgba(102, 126, 234, 0.1);
+      transition: all 0.3s ease;
+    }
+
+    .dashboard-card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 15px 35px rgba(102, 126, 234, 0.2);
+    }
+
+    .card-header {
+      display: flex;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+
+    .card-icon {
+      font-size: 2rem;
+      margin-right: 15px;
+    }
+
+    .card-title {
+      font-size: 1.4rem;
+      font-weight: 600;
+      color: #1f2937;
+    }
+
+    .info-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 15px;
+      padding: 12px 0;
+      border-bottom: 1px solid #f1f5f9;
+    }
+
+    .info-row:last-child {
+      border-bottom: none;
+      margin-bottom: 0;
+    }
+
+    .info-label {
+      color: #6b7280;
+      font-size: 0.9rem;
+    }
+
+    .info-value {
+      font-weight: 600;
+      color: #1f2937;
+    }
+
+    .goal-progress {
+      background: #f8fafc;
+      border-radius: 12px;
+      padding: 20px;
+      margin-top: 15px;
+    }
+
+    .progress-bar {
+      width: 100%;
+      height: 12px;
+      background: #e5e7eb;
+      border-radius: 6px;
+      overflow: hidden;
+      margin: 15px 0;
+    }
+
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #10b981, #34d399);
+      border-radius: 6px;
+      transition: width 0.3s ease;
+    }
+
+    .progress-stats {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 10px;
+    }
+
+    .progress-stat {
+      text-align: center;
+    }
+
+    .stat-value {
+      font-weight: 600;
+      font-size: 1.1rem;
+      color: #1f2937;
+    }
+
+    .stat-label {
+      color: #6b7280;
+      font-size: 0.8rem;
+    }
+
+    .action-buttons {
+      display: flex;
+      gap: 15px;
+      flex-wrap: wrap;
+      margin-top: 25px;
+    }
+
+    .btn {
+      padding: 12px 24px;
+      border-radius: 25px;
+      text-decoration: none;
+      font-weight: 600;
+      font-size: 0.9rem;
+      border: none;
+      cursor: pointer;
+      transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 25px rgba(102, 126, 234, 0.6);
+    }
+
+    .btn-success {
+      background: linear-gradient(135deg, #10b981 0%, #34d399 100%);
+      color: white;
+      box-shadow: 0 4px 15px rgba(16, 185, 129, 0.4);
+    }
+
+    .btn-success:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 25px rgba(16, 185, 129, 0.6);
+    }
+
+    .btn-info {
+      background: linear-gradient(135deg, #3b82f6 0%, #6366f1 100%);
+      color: white;
+      box-shadow: 0 4px 15px rgba(59, 130, 246, 0.4);
+    }
+
+    .btn-info:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 25px rgba(59, 130, 246, 0.6);
+    }
+
+    .btn-secondary {
+      background: linear-gradient(145deg, #f8fafc 0%, #e2e8f0 100%);
+      color: #475569;
+      border: 1px solid #cbd5e1;
+    }
+
+    .btn-secondary:hover {
+      background: linear-gradient(145deg, #e2e8f0 0%, #cbd5e1 100%);
+      transform: translateY(-2px);
+    }
+
+    .no-goal {
+      text-align: center;
+      padding: 30px;
+      color: #6b7280;
+    }
+
+    .nav-breadcrumb {
+      margin-bottom: 20px;
+    }
+
+    .breadcrumb-link {
+      color: #667eea;
+      text-decoration: none;
+      font-weight: 500;
+    }
+
+    .breadcrumb-link:hover {
+      text-decoration: underline;
+    }
+
+    .breadcrumb-separator {
+      margin: 0 10px;
+      color: #9ca3af;
+    }
+
+    .hero-action-btn:hover {
+      background: rgba(255,255,255,0.3) !important;
+      transform: translateY(-2px);
+    }
+
+    .plan-badge {
+      background: linear-gradient(135deg, #10b981 0%, #34d399 100%);
+      color: white;
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 0.8rem;
+      font-weight: 600;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="nav-breadcrumb">
+      <a href="/" class="breadcrumb-link">ホーム</a>
+      <span class="breadcrumb-separator">›</span>
+      <span><%= company.company_name %></span>
+    </div>
+
+    <div class="hero-section">
+      <!-- ナビゲーション -->
+      <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 6px;">
+        <div class="flex gap-2">
+          <a href="/" style="padding: 6px 12px; background: rgba(255,255,255,0.2); color: white; text-decoration: none; border-radius: 6px; font-size: 0.8rem; font-weight: 600;">
+            🏠 ホーム
+          </a>
+          <a href="/companies" style="padding: 6px 12px; background: rgba(255,255,255,0.2); color: white; text-decoration: none; border-radius: 6px; font-size: 0.8rem; font-weight: 600;">
+            🏢 企業一覧
+          </a>
+        </div>
+      </div>
+      
+      <h1 class="company-title"><%= company.company_name %></h1>
+      <p class="company-industry"><%= company.industry %></p>
+      <div class="company-id" id="companyIdDisplay">
+        <span id="idText">ID: <%= company.id %></span>
+        <button id="editIdBtn" onclick="editCompanyId()" style="margin-left: 10px; padding: 4px 8px; background: rgba(255,255,255,0.2); color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.8rem;">編集</button>
+      </div>
+      <div class="company-id" id="companyIdEdit" style="display: none;">
+        <input type="text" id="newCompanyId" value="<%= company.id %>" style="padding: 4px 8px; margin-right: 8px; border: none; border-radius: 4px;">
+        <button onclick="saveCompanyId()" style="padding: 4px 8px; background: #10b981; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.8rem; margin-right: 4px;">保存</button>
+        <button onclick="cancelEditId()" style="padding: 4px 8px; background: #6b7280; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.8rem;">キャンセル</button>
+      </div>
+      
+      <!-- アクションボタン -->
+      <div style="margin-top: 8px; padding-top: 8px; border-top: 1px solid rgba(255,255,255,0.2);">
+        <div style="display: flex; flex-wrap: wrap; gap: 10px; justify-content: center;">
+          <a href="#" onclick="navigateToDataInput()" class="hero-action-btn" style="padding: 8px 16px; background: rgba(255,255,255,0.2); color: white; text-decoration: none; border-radius: 18px; font-size: 0.85rem; font-weight: 600; transition: all 0.2s; backdrop-filter: blur(10px);">
+            📝 データ入力
+          </a>
+          <a href="#" onclick="navigateToAnalytics()" class="hero-action-btn" style="padding: 8px 16px; background: rgba(255,255,255,0.2); color: white; text-decoration: none; border-radius: 18px; font-size: 0.85rem; font-weight: 600; transition: all 0.2s; backdrop-filter: blur(10px);">
+            📊 分析
+          </a>
+          <a href="#" onclick="navigateToReport()" class="hero-action-btn" style="padding: 8px 16px; background: rgba(255,255,255,0.2); color: white; text-decoration: none; border-radius: 18px; font-size: 0.85rem; font-weight: 600; transition: all 0.2s; backdrop-filter: blur(10px);">
+            📋 レポート
+          </a>
+          <a href="/goals?company=<%= company.id %>" class="hero-action-btn" style="padding: 8px 16px; background: rgba(255,255,255,0.2); color: white; text-decoration: none; border-radius: 18px; font-size: 0.85rem; font-weight: 600; transition: all 0.2s; backdrop-filter: blur(10px);">
+            🎯 目標設定
+          </a>
+          <a href="/companies/edit/<%= company.id %>" class="hero-action-btn" style="padding: 8px 16px; background: rgba(255,255,255,0.2); color: white; text-decoration: none; border-radius: 18px; font-size: 0.85rem; font-weight: 600; transition: all 0.2s; backdrop-filter: blur(10px);">
+            ✏️ 企業情報編集
+          </a>
+        </div>
+      </div>
+    </div>
+
+    <div class="dashboard-grid">
+      <!-- 基本情報カード -->
+      <div class="dashboard-card">
+        <div class="card-header">
+          <div class="card-icon">🏢</div>
+          <div class="card-title">基本情報</div>
+        </div>
+        <div class="info-row">
+          <span class="info-label">企業名</span>
+          <span class="info-value"><%= company.company_name %></span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">業種</span>
+          <span class="info-value"><%= company.industry %></span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">運用開始日</span>
+          <span class="info-value"><%= company.start_date %></span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">開始時フォロワー数</span>
+          <span class="info-value"><%= company.initial_followers.toLocaleString() %></span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">契約プラン</span>
+          <span class="info-value">
+            <% if (company.plan && company.plan.trim() !== '') { %>
+              <span class="plan-badge"><%= company.plan %></span>
+            <% } else { %>
+              <span class="text-gray-500">未設定</span>
+            <% } %>
+          </span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">登録日</span>
+          <span class="info-value"><%= new Date(company.created_at).toLocaleDateString('ja-JP') %></span>
+        </div>
+      </div>
+
+      <!-- 目標達成状況カード -->
+      <div class="dashboard-card">
+        <div class="card-header">
+          <div class="card-icon">🎯</div>
+          <div class="card-title">目標達成状況</div>
+        </div>
+        
+        <!-- 月選択 -->
+        <div style="margin-bottom: 20px; padding: 15px; background: #f8fafc; border-radius: 12px;">
+          <label style="font-size: 0.9rem; color: #6b7280; display: block; margin-bottom: 8px;">表示する月:</label>
+          <div style="display: flex; gap: 10px; align-items: center;">
+            <select id="yearSelect" style="padding: 8px 12px; border-radius: 8px; border: 1px solid #d1d5db; font-size: 0.9rem;">
+              <% for(let y = 2020; y <= new Date().getFullYear() + 1; y++) { %>
+                <option value="<%= y %>" <%= y === new Date().getFullYear() ? 'selected' : '' %>><%= y %></option>
+              <% } %>
+            </select>
+            <select id="monthSelect" style="padding: 8px 12px; border-radius: 8px; border: 1px solid #d1d5db; font-size: 0.9rem;">
+              <% for(let m = 1; m <= 12; m++) { %>
+                <option value="<%= m %>" <%= m === (new Date().getMonth() + 1) ? 'selected' : '' %>><%= m %>月</option>
+              <% } %>
+            </select>
+            <button onclick="changeMonth()" style="padding: 8px 16px; background: #667eea; color: white; border: none; border-radius: 8px; font-size: 0.9rem; cursor: pointer;">更新</button>
+          </div>
+        </div>
+        
+        <% if (currentGoal) { %>
+          <div class="goal-progress">
+            <% 
+              const achievementRate = currentGoal.target_followers > 0 
+                ? ((currentGoal.current_followers / currentGoal.target_followers) * 100)
+                : 0;
+              const remaining = Math.max(0, currentGoal.target_followers - currentGoal.current_followers);
+            %>
+            
+            <div class="progress-stats">
+              <div class="progress-stat">
+                <div class="stat-value"><%= currentGoal.target_followers.toLocaleString() %></div>
+                <div class="stat-label">目標</div>
+              </div>
+              <div class="progress-stat">
+                <div class="stat-value"><%= currentGoal.current_followers.toLocaleString() %></div>
+                <div class="stat-label">現在</div>
+              </div>
+              <div class="progress-stat">
+                <div class="stat-value"><%= remaining.toLocaleString() %></div>
+                <div class="stat-label">残り</div>
+              </div>
+            </div>
+            
+            <div class="progress-bar">
+              <div class="progress-fill" style="width: <%= Math.min(100, achievementRate) %>%"></div>
+            </div>
+            
+            <div style="text-align: center; margin-top: 15px;">
+              <span style="font-size: 1.5rem; font-weight: bold; color: <%= achievementRate >= 100 ? '#10b981' : achievementRate >= 75 ? '#f59e0b' : '#ef4444' %>;">
+                <%= achievementRate.toFixed(1) %>%
+              </span>
+            </div>
+            
+            <!-- トータルフォロワー数 -->
+            <div style="margin-top: 20px; padding: 15px; background: #f0f9ff; border-radius: 8px; border: 1px solid #bae6fd;">
+              <div style="display: flex; justify-content: space-between; align-items: center;">
+                <span style="font-weight: 600; color: #0c4a6e;">現在のトータルフォロワー数</span>
+                <span style="font-size: 1.3rem; font-weight: bold; color: #10b981;">
+                  <%= calculatedCurrentFollowers.toLocaleString() %>
+                </span>
+              </div>
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 8px; font-size: 0.9rem; color: #6b7280;">
+                <span>開始時: <%= company.initial_followers.toLocaleString() %></span>
+                <span style="color: #10b981; font-weight: 600;">+<%= (calculatedCurrentFollowers - company.initial_followers).toLocaleString() %></span>
+              </div>
+            </div>
+          </div>
+        <% } else { %>
+          <div class="no-goal">
+            <p>今月の目標が設定されていません</p>
+            
+            <!-- トータルフォロワー数（目標未設定の場合） -->
+            <div style="margin-top: 20px; padding: 15px; background: #f0f9ff; border-radius: 8px; border: 1px solid #bae6fd;">
+              <div style="display: flex; justify-content: space-between; align-items: center;">
+                <span style="font-weight: 600; color: #0c4a6e;">現在のトータルフォロワー数</span>
+                <span style="font-size: 1.3rem; font-weight: bold; color: #10b981;">
+                  <%= calculatedCurrentFollowers.toLocaleString() %>
+                </span>
+              </div>
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 8px; font-size: 0.9rem; color: #6b7280;">
+                <span>開始時: <%= company.initial_followers.toLocaleString() %></span>
+                <span style="color: #10b981; font-weight: 600;">+<%= (calculatedCurrentFollowers - company.initial_followers).toLocaleString() %></span>
+              </div>
+            </div>
+          </div>
+        <% } %>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    function changeMonth() {
+      const year = document.getElementById('yearSelect').value;
+      const month = document.getElementById('monthSelect').value;
+      window.location.href = `/companies/<%= company.id %>?year=${year}&month=${month}`;
+    }
+    
+    function navigateToDataInput() {
+      const year = document.getElementById('yearSelect').value;
+      const month = document.getElementById('monthSelect').value;
+      window.location.href = `/add-post-grid?company=<%= company.id %>&year=${year}&month=${month}`;
+    }
+    
+    function navigateToAnalytics() {
+      const year = document.getElementById('yearSelect').value;
+      const month = document.getElementById('monthSelect').value;
+      window.location.href = `/analytics?company=<%= company.id %>&year=${year}&month=${month}`;
+    }
+    
+    function navigateToReport() {
+      const year = document.getElementById('yearSelect').value;
+      const month = document.getElementById('monthSelect').value;
+      window.location.href = `/report/<%= company.id %>?year=${year}&month=${month}`;
+    }
+    
+    function editCompanyId() {
+      document.getElementById('companyIdDisplay').style.display = 'none';
+      document.getElementById('companyIdEdit').style.display = 'block';
+      document.getElementById('newCompanyId').focus();
+    }
+    
+    function cancelEditId() {
+      document.getElementById('companyIdDisplay').style.display = 'block';
+      document.getElementById('companyIdEdit').style.display = 'none';
+      document.getElementById('newCompanyId').value = '<%= company.id %>';
+    }
+    
+    async function saveCompanyId() {
+      const newId = document.getElementById('newCompanyId').value.trim();
+      
+      if (!newId) {
+        alert('企業IDを入力してください');
+        return;
+      }
+      
+      if (newId === '<%= company.id %>') {
+        cancelEditId();
+        return;
+      }
+      
+      try {
+        const response = await fetch(`/api/companies/<%= company.id %>/update-id`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ newId: newId })
+        });
+        
+        if (response.ok) {
+          alert('企業IDを更新しました');
+          // 新しいIDでページをリロード
+          window.location.href = `/companies/${newId}`;
+        } else {
+          const error = await response.json();
+          alert('エラー: ' + (error.message || '更新に失敗しました'));
+        }
+      } catch (error) {
+        alert('エラー: ' + error.message);
+      }
+    }
+  </script>
+</body>
+</html>

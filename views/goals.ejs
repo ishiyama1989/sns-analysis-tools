@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>月次目標設定 - SNS運用代行管理システム</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>月次目標設定 - <%= company || 'default' %></h1>
+      <nav>
+        <a href="/" class="btn btn-link">ホーム</a>
+        <div class="company-nav-inline">
+          <select id="companySelect" onchange="changeCompany()">
+            <!-- 動的に生成 -->
+          </select>
+        </div>
+        <a href="/companies" class="btn btn-link">クライアント管理</a>
+      </nav>
+    </header>
+    
+    <main>
+      <% if (currentGoal) { %>
+        <div class="current-goal-display">
+          <h2>現在の目標（<%= currentGoal.year %>年<%= currentGoal.month %>月）</h2>
+          <div class="goal-stats">
+            <div class="goal-stat">
+              <label>目標フォロワー数</label>
+              <span class="goal-number"><%= currentGoal.target_followers.toLocaleString() %></span>
+            </div>
+            <div class="goal-stat">
+              <label>現在フォロワー数</label>
+              <span class="goal-number"><%= currentGoal.current_followers.toLocaleString() %></span>
+            </div>
+            <div class="goal-stat">
+              <label>達成率</label>
+              <% 
+                const achievementRate = currentGoal.target_followers > 0 
+                  ? ((currentGoal.current_followers / currentGoal.target_followers) * 100).toFixed(1)
+                  : 0;
+              %>
+              <span class="achievement-rate <%= achievementRate >= 100 ? 'achieved' : achievementRate >= 75 ? 'good' : 'needs-work' %>">
+                <%= achievementRate %>%
+              </span>
+            </div>
+            <div class="goal-stat">
+              <label>残り達成数</label>
+              <span class="remaining-followers">
+                <%= Math.max(0, currentGoal.target_followers - currentGoal.current_followers).toLocaleString() %>
+              </span>
+            </div>
+          </div>
+          
+          <!-- 現在フォロワー数表示（自動計算） -->
+          <div class="update-followers-section">
+            <h3>現在フォロワー数（自動計算）</h3>
+            <div class="auto-calculated-info">
+              <p>現在のフォロワー数は投稿データの「新しいフォロワー」から自動計算されます。</p>
+              <div class="calculation-display">
+                <span class="calculation-formula">
+                  開始時フォロワー + 投稿で獲得した新しいフォロワー = 現在フォロワー数
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      <% } %>
+      
+      <div class="goal-form-section">
+        <h2><%= currentGoal ? '目標を変更' : '新しい目標を設定' %></h2>
+        <form class="goal-form" action="/goals" method="POST">
+          <input type="hidden" name="company" value="<%= company || 'default' %>">
+          <div class="form-row">
+            <div class="form-group">
+              <label for="year">年</label>
+              <select id="year" name="year" required>
+                <% 
+                  const currentYear = new Date().getFullYear();
+                  for (let i = currentYear; i <= currentYear + 2; i++) {
+                %>
+                  <option value="<%= i %>" <%= currentGoal && currentGoal.year === i ? 'selected' : '' %>>
+                    <%= i %>年
+                  </option>
+                <% } %>
+              </select>
+            </div>
+            
+            <div class="form-group">
+              <label for="month">月</label>
+              <select id="month" name="month" required>
+                <% for (let i = 1; i <= 12; i++) { %>
+                  <option value="<%= i %>" <%= currentGoal && currentGoal.month === i ? 'selected' : '' %>>
+                    <%= i %>月
+                  </option>
+                <% } %>
+              </select>
+            </div>
+          </div>
+          
+          <div class="form-group">
+            <label for="target_followers">目標フォロワー数</label>
+            <input type="number" id="target_followers" name="target_followers" 
+                   value="<%= currentGoal ? currentGoal.target_followers : '' %>" 
+                   min="0" placeholder="例: 10000" required>
+          </div>
+          
+          <div class="form-group">
+            <label for="current_followers_initial">現在フォロワー数（自動計算値）</label>
+            <input type="number" id="current_followers_initial" name="current_followers" 
+                   value="<%= currentGoal ? currentGoal.current_followers : 0 %>" 
+                   min="0" readonly style="background-color: #f3f4f6; cursor: not-allowed;">
+            <small>この値は投稿データから自動計算されます（手動変更不可）</small>
+          </div>
+          
+          <div class="form-actions">
+            <button type="submit" class="btn btn-primary">
+              <%= currentGoal ? '目標を更新' : '目標を設定' %>
+            </button>
+            <a href="/" class="btn btn-secondary">キャンセル</a>
+          </div>
+        </form>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    // 会社選択機能
+    function changeCompany() {
+      const company = document.getElementById('companySelect').value;
+      window.location.href = `/goals?company=${company}`;
+    }
+    
+    // 会社リストを読み込んでセレクトボックスに設定
+    async function loadCompanyList() {
+      try {
+        const response = await fetch('/api/companies');
+        const companies = await response.json();
+        
+        const companySelect = document.getElementById('companySelect');
+        companySelect.innerHTML = '<option value="default">デフォルト</option>';
+        
+        companies.forEach(company => {
+          const option = document.createElement('option');
+          option.value = company.id;
+          option.textContent = company.company_name;
+          option.selected = company.id === '<%= company || "default" %>';
+          companySelect.appendChild(option);
+        });
+      } catch (error) {
+        console.error('会社リストの読み込みに失敗:', error);
+      }
+    }
+    
+    // ページ読み込み時に会社リストを設定
+    document.addEventListener('DOMContentLoaded', loadCompanyList);
+  </script>
+</body>
+</html>

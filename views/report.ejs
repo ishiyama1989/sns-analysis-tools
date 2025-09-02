@@ -1,0 +1,1036 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>月次レポート作成 - SNS運用代行管理システム</title>
+  <link rel="stylesheet" href="/style.css">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    .report-container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+    
+    .report-header {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 15px 30px;
+      border-radius: 12px;
+      margin-bottom: 30px;
+      text-align: center;
+    }
+    
+    .report-section {
+      background: white;
+      border-radius: 12px;
+      padding: 25px;
+      margin-bottom: 25px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+    
+    .metrics-grid {
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      gap: 15px;
+      margin: 20px 0;
+    }
+
+    @media (max-width: 1200px) {
+      .metrics-grid {
+        grid-template-columns: repeat(3, 1fr);
+      }
+    }
+
+    @media (max-width: 768px) {
+      .metrics-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 10px;
+      }
+    }
+
+    @media (max-width: 480px) {
+      .metrics-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+    
+    .metric-card {
+      background: linear-gradient(145deg, #f8fafc 0%, #e2e8f0 100%);
+      padding: 15px 10px;
+      border-radius: 8px;
+      text-align: center;
+      border: 1px solid #e2e8f0;
+      min-height: 80px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+    
+    .metric-value {
+      font-size: 1.5rem;
+      font-weight: bold;
+      color: #2d3748;
+      line-height: 1.2;
+    }
+    
+    .metric-label {
+      color: #718096;
+      font-size: 0.8rem;
+      margin-top: 5px;
+      line-height: 1.2;
+    }
+
+    @media (max-width: 768px) {
+      .metric-value {
+        font-size: 1.3rem;
+      }
+      .metric-label {
+        font-size: 0.7rem;
+      }
+    }
+    
+    .chart-container {
+      height: 300px;
+      margin: 20px 0;
+    }
+
+    .charts-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      grid-template-rows: 1fr 1fr;
+      gap: 25px;
+      margin: 25px 0;
+    }
+
+    .charts-grid.two-charts {
+      grid-template-columns: 1fr 1fr;
+      grid-template-rows: 1fr;
+    }
+
+    .chart-card {
+      background: white;
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      border: 1px solid #e2e8f0;
+    }
+
+    .chart-card h3 {
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: #2d3748;
+      margin-bottom: 10px;
+      text-align: center;
+    }
+
+    .chart-card .chart-container {
+      height: 400px;
+      margin: 15px 0 0 0;
+    }
+
+    @media (max-width: 768px) {
+      .charts-grid,
+      .charts-grid.two-charts {
+        grid-template-columns: 1fr;
+        grid-template-rows: repeat(2, 1fr);
+        gap: 20px;
+      }
+      .chart-card .chart-container {
+        height: 350px;
+      }
+    }
+    
+    .print-btn {
+      background: #4299e1;
+      color: white;
+      padding: 12px 24px;
+      border: none;
+      border-radius: 6px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    
+    .print-btn:hover {
+      background: #3182ce;
+    }
+    
+    .month-selector {
+      background: #f7fafc;
+      padding: 20px;
+      border-radius: 8px;
+      margin-bottom: 25px;
+    }
+    
+    @media print {
+      .no-print {
+        display: none;
+      }
+      .report-section {
+        page-break-inside: avoid;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="report-container">
+    <!-- ナビゲーション -->
+    <nav class="no-print mb-6">
+      <div class="flex items-center justify-between p-4 bg-white rounded-lg shadow-md">
+        <div class="flex items-center gap-3">
+          <a href="/" class="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition-colors">
+            🏠 ホーム
+          </a>
+          <a href="/companies/<%= company.id %>" class="inline-flex items-center gap-2 px-4 py-2 bg-gray-600 text-white font-semibold rounded-lg hover:bg-gray-700 transition-colors">
+            🏢 企業詳細
+          </a>
+          <a href="#" onclick="navigateToDataInput()" class="inline-flex items-center gap-2 px-4 py-2 bg-green-600 text-white font-semibold rounded-lg hover:bg-green-700 transition-colors">
+            📝 データ入力
+          </a>
+          <a href="#" onclick="navigateToAnalytics()" class="inline-flex items-center gap-2 px-4 py-2 bg-purple-600 text-white font-semibold rounded-lg hover:bg-purple-700 transition-colors">
+            📊 分析
+          </a>
+        </div>
+        <h1 class="text-xl font-bold text-gray-800">📊 月次レポート作成</h1>
+      </div>
+    </nav>
+
+    <!-- 月選択 -->
+    <div class="month-selector no-print">
+      <h3 class="text-lg font-bold mb-4">📅 レポート対象月選択</h3>
+      <div class="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+        <div>
+          <label for="yearSelect" class="block text-sm font-semibold text-gray-700 mb-2">年</label>
+          <select id="yearSelect" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:border-blue-500 bg-white">
+            <% for(let y = 2020; y <= new Date().getFullYear() + 1; y++) { %>
+              <option value="<%= y %>" <%= y === year ? 'selected' : '' %>><%= y %>年</option>
+            <% } %>
+          </select>
+        </div>
+        <div>
+          <label for="monthSelect" class="block text-sm font-semibold text-gray-700 mb-2">月</label>
+          <select id="monthSelect" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:border-blue-500 bg-white">
+            <% for(let m = 1; m <= 12; m++) { %>
+              <option value="<%= m %>" <%= m === month ? 'selected' : '' %>><%= m %>月</option>
+            <% } %>
+          </select>
+        </div>
+        <div>
+          <button id="generateReport" class="w-full px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg">
+            📈 レポート生成
+          </button>
+        </div>
+        <div>
+          <button id="printReport" class="print-btn w-full">
+            🖨️ 印刷・PDF保存
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- レポートヘッダー -->
+    <div class="report-header">
+      <h1 class="text-3xl font-bold mb-2">📊 SNS運用月次レポート</h1>
+      <div class="text-2xl font-bold opacity-95 mb-2"><%= company.company_name %> 様</div>
+      <div class="text-lg opacity-90">
+        <span><%= year %>年<%= month %>月度　・　作成日: <%= new Date().toLocaleDateString('ja-JP') %></span>
+      </div>
+    </div>
+
+    <!-- 企業情報サマリー -->
+    <div class="report-section">
+      <h2 class="text-xl font-bold mb-4 text-gray-800">🏢 企業情報</h2>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-gray-700">
+        <div><strong>企業名:</strong> <%= company.company_name %></div>
+        <div><strong>業界:</strong> <%= company.industry %></div>
+        <div><strong>運用開始:</strong> <%= company.start_date %></div>
+        <div><strong>開始時フォロワー数:</strong> <%= company.initial_followers.toLocaleString() %>人</div>
+      </div>
+    </div>
+
+    <!-- パフォーマンス概要 -->
+    <div class="report-section">
+      <h2 class="text-xl font-bold mb-4 text-gray-800">📈 今月のパフォーマンス概要</h2>
+      <div class="metrics-grid" id="metricsGrid">
+        <!-- JavaScriptで動的生成 -->
+      </div>
+    </div>
+
+    <!-- 投稿一覧 -->
+    <div class="report-section">
+      <h2 class="text-xl font-bold mb-4 text-gray-800">📝 投稿詳細</h2>
+      <div class="overflow-x-auto">
+        <table class="w-full border-collapse border border-gray-300" id="postsTable">
+          <thead>
+            <tr class="bg-gray-100">
+              <th class="border border-gray-300 px-4 py-2">日付</th>
+              <th class="border border-gray-300 px-4 py-2">投稿名</th>
+              <th class="border border-gray-300 px-4 py-2">ジャンル</th>
+              <th class="border border-gray-300 px-4 py-2">いいね数</th>
+              <th class="border border-gray-300 px-4 py-2">保存数</th>
+              <th class="border border-gray-300 px-4 py-2">リーチ数</th>
+              <th class="border border-gray-300 px-4 py-2">新フォロワー</th>
+            </tr>
+          </thead>
+          <tbody>
+            <!-- JavaScriptで動的生成 -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- グラフセクション（2つのチャート） -->
+    <div class="report-section">
+      <h2 class="text-xl font-bold mb-4 text-gray-800">📊 データ分析ダッシュボード</h2>
+      <div class="charts-grid two-charts">
+        <!-- パフォーマンス推移 -->
+        <div class="chart-card">
+          <h3>📈 パフォーマンス推移</h3>
+          <div class="chart-container">
+            <canvas id="performanceChart"></canvas>
+          </div>
+        </div>
+
+        <!-- フォロワー数推移 -->
+        <div class="chart-card">
+          <h3>👥 累積フォロワー数推移</h3>
+          <div class="chart-container">
+            <canvas id="followerChart"></canvas>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 用語説明 -->
+    <div class="report-section">
+      <h2 class="text-xl font-bold mb-4 text-gray-800">📖 用語説明</h2>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <!-- エンゲージメント数の説明 -->
+        <div class="bg-blue-50 p-4 rounded-lg border-l-4 border-blue-500">
+          <h3 class="font-bold text-blue-800 mb-2 flex items-center">
+            <span class="text-xl mr-2">💝</span>
+            エンゲージメント数とは？
+          </h3>
+          <p class="text-blue-700 text-sm leading-relaxed">
+            投稿に対するユーザーの<strong>反応の総数</strong>を指します。具体的には以下の合計値です：
+          </p>
+          <ul class="text-blue-700 text-sm mt-2 ml-4 space-y-1">
+            <li>• <strong>いいね数</strong>：投稿を気に入ったユーザーの数</li>
+            <li>• <strong>コメント数</strong>：投稿にコメントしたユーザーの数</li>
+            <li>• <strong>保存数</strong>：後で見返すために保存したユーザーの数</li>
+            <li>• <strong>シェア数</strong>：投稿を他のユーザーにシェアした数</li>
+          </ul>
+          <p class="text-blue-600 text-xs mt-3 font-medium">
+            💡 エンゲージメント率が高いほど、フォロワーとの関係性が良好であることを示します
+          </p>
+        </div>
+
+        <!-- リーチ数の説明 -->
+        <div class="bg-green-50 p-4 rounded-lg border-l-4 border-green-500">
+          <h3 class="font-bold text-green-800 mb-2 flex items-center">
+            <span class="text-xl mr-2">👀</span>
+            リーチ数とは？
+          </h3>
+          <p class="text-green-700 text-sm leading-relaxed">
+            投稿を<strong>実際に見たユニークユーザー数</strong>を指します。同じユーザーが何度見ても1人としてカウントされます：
+          </p>
+          <ul class="text-green-700 text-sm mt-2 ml-4 space-y-1">
+            <li>• <strong>フォロワーリーチ</strong>：フォロワーの中で投稿を見た人数</li>
+            <li>• <strong>非フォロワーリーチ</strong>：フォロワー以外で投稿を見た人数</li>
+            <li>• <strong>リーチ経路</strong>：フィード、発見タブ、ハッシュタグ検索など</li>
+          </ul>
+          <p class="text-green-600 text-xs mt-3 font-medium">
+            💡 非フォロワーリーチが多いほど、新規ユーザーへの露出が成功していることを示します
+          </p>
+        </div>
+
+        <!-- インプレッション数との違い -->
+        <div class="bg-yellow-50 p-4 rounded-lg border-l-4 border-yellow-500 md:col-span-2">
+          <h3 class="font-bold text-yellow-800 mb-2 flex items-center">
+            <span class="text-xl mr-2">🔍</span>
+            リーチ数とインプレッション数の違い
+          </h3>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+            <div>
+              <h4 class="font-semibold text-yellow-800 mb-1">📊 リーチ数（Reach）</h4>
+              <p class="text-yellow-700">投稿を見た<strong>ユニークユーザー数</strong></p>
+              <p class="text-yellow-600 text-xs mt-1">同じ人が何度見ても1としてカウント</p>
+            </div>
+            <div>
+              <h4 class="font-semibold text-yellow-800 mb-1">👁️ インプレッション数（Impressions）</h4>
+              <p class="text-yellow-700">投稿が表示された<strong>総回数</strong></p>
+              <p class="text-yellow-600 text-xs mt-1">同じ人が2回見たら2としてカウント</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 総評・コメント -->
+    <div class="report-section">
+      <h2 class="text-xl font-bold mb-4 text-gray-800">💭 今月の総評</h2>
+      <div id="summaryComments" class="space-y-3">
+        <!-- JavaScriptで動的生成 -->
+      </div>
+    </div>
+
+    <!-- 来月の投稿提案 -->
+    <div class="report-section">
+      <h2 class="text-xl font-bold mb-4 text-gray-800">🚀 来月の投稿提案</h2>
+      <div id="nextMonthSuggestions" class="space-y-4">
+        <!-- JavaScriptで動的生成 -->
+      </div>
+    </div>
+
+    <!-- フッター -->
+    <div class="report-section text-center text-gray-600">
+      <p class="text-sm">このレポートは SNS運用代行管理システム により自動生成されました</p>
+      <p class="text-xs mt-1">Generated on <%= new Date().toISOString() %></p>
+    </div>
+  </div>
+
+  <script>
+    let currentPosts = [];
+    
+    document.addEventListener('DOMContentLoaded', function() {
+      loadReportData();
+    });
+
+    document.getElementById('generateReport').addEventListener('click', loadReportData);
+    document.getElementById('printReport').addEventListener('click', function() {
+      window.print();
+    });
+
+    async function loadReportData() {
+      const year = document.getElementById('yearSelect').value;
+      const month = document.getElementById('monthSelect').value;
+      const company = '<%= company.id %>';
+
+      try {
+        const response = await fetch(`/api/posts-grid?year=${year}&month=${month}&company=${company}`);
+        const posts = await response.json();
+        
+        currentPosts = posts;
+        generateMetrics(posts);
+        generatePostsTable(posts);
+        generateCharts(posts);
+        generateSummary(posts);
+        generateNextMonthSuggestions(posts);
+        
+      } catch (error) {
+        console.error('レポートデータの読み込みエラー:', error);
+        alert('データの読み込みに失敗しました');
+      }
+    }
+
+    function generateMetrics(posts) {
+      const totalPosts = posts.length;
+      const totalLikes = posts.reduce((sum, post) => sum + (post.likes || 0), 0);
+      const totalSaves = posts.reduce((sum, post) => sum + (post.saves || 0), 0);
+      const totalReach = posts.reduce((sum, post) => sum + (post.reachTotal || 0), 0);
+      const totalNewFollowers = posts.reduce((sum, post) => sum + (post.newFollowers || 0), 0);
+      const avgEngagement = totalPosts > 0 ? Math.round((totalLikes + totalSaves) / totalPosts) : 0;
+
+      const metricsHtml = `
+        <div class="metric-card">
+          <div class="metric-value">${totalPosts}</div>
+          <div class="metric-label">投稿数</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-value">${totalLikes.toLocaleString()}</div>
+          <div class="metric-label">いいね総数</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-value">${totalSaves.toLocaleString()}</div>
+          <div class="metric-label">保存総数</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-value">${totalReach.toLocaleString()}</div>
+          <div class="metric-label">リーチ総数</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-value">${totalNewFollowers.toLocaleString()}</div>
+          <div class="metric-label">新フォロワー</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-value">${avgEngagement.toLocaleString()}</div>
+          <div class="metric-label">平均エンゲージメント</div>
+        </div>
+      `;
+      
+      document.getElementById('metricsGrid').innerHTML = metricsHtml;
+    }
+
+    function generatePostsTable(posts) {
+      const tbody = document.querySelector('#postsTable tbody');
+      tbody.innerHTML = posts.map(post => `
+        <tr>
+          <td class="border border-gray-300 px-4 py-2">${post.date}</td>
+          <td class="border border-gray-300 px-4 py-2">${post.title || '投稿'}</td>
+          <td class="border border-gray-300 px-4 py-2">${post.genre}</td>
+          <td class="border border-gray-300 px-4 py-2 text-right">${(post.likes || 0).toLocaleString()}</td>
+          <td class="border border-gray-300 px-4 py-2 text-right">${(post.saves || 0).toLocaleString()}</td>
+          <td class="border border-gray-300 px-4 py-2 text-right">${(post.reachTotal || 0).toLocaleString()}</td>
+          <td class="border border-gray-300 px-4 py-2 text-right">${(post.newFollowers || 0).toLocaleString()}</td>
+        </tr>
+      `).join('');
+    }
+
+    function generateCharts(posts) {
+      // デバッグ: データの内容を確認
+      console.log('Posts data for charts:', posts);
+      if (posts.length > 0) {
+        console.log('First post data:', posts[0]);
+        console.log('Keys:', Object.keys(posts[0]));
+      }
+
+      // 投稿タイプ別カラーマッピング
+      const postTypeColors = {
+        'フィード': '#4299e1',      // 青
+        'リール': '#f56565',       // 赤  
+        'ストーリーズ': '#48bb78',  // 緑
+        'ライブ': '#ed8936'        // オレンジ
+      };
+
+      // 各投稿の色を決定する関数
+      function getPostTypeColor(postType, alpha = 1) {
+        const baseColor = postTypeColors[postType] || '#6b7280'; // デフォルトはグレー
+        if (alpha === 1) return baseColor;
+        // アルファ値を考慮した色を返す
+        const hex = baseColor.replace('#', '');
+        const r = parseInt(hex.substr(0, 2), 16);
+        const g = parseInt(hex.substr(2, 2), 16);
+        const b = parseInt(hex.substr(4, 2), 16);
+        return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+      }
+      
+      // パフォーマンス推移チャート（線グラフ + 積み上げ棒グラフ）
+      const ctx1 = document.getElementById('performanceChart').getContext('2d');
+      new Chart(ctx1, {
+        data: {
+          labels: posts.map(post => {
+            const date = new Date(post.date);
+            const dateStr = `${date.getMonth() + 1}/${date.getDate()}`;
+            const title = (post.title && post.title.length > 0) ? post.title : '投稿';
+            const genre = post.genre || '';
+            const postType = post.postType || 'フィード';
+            return [dateStr, title, genre, postType];
+          }),
+          datasets: [{
+            type: 'line',
+            label: 'いいね数',
+            data: posts.map(post => post.likes || 0),
+            borderColor: posts.map(post => getPostTypeColor(post.postType || 'フィード')),
+            backgroundColor: posts.map(post => getPostTypeColor(post.postType || 'フィード', 0.1)),
+            borderWidth: 3,
+            fill: false,
+            tension: 0.4,
+            yAxisID: 'y',
+            pointBackgroundColor: posts.map(post => getPostTypeColor(post.postType || 'フィード')),
+            pointBorderColor: posts.map(post => getPostTypeColor(post.postType || 'フィード')),
+            pointBorderWidth: 2,
+            pointRadius: 6
+          }, {
+            type: 'line',
+            label: '保存数',
+            data: posts.map(post => post.saves || 0),
+            borderColor: posts.map(post => getPostTypeColor(post.postType || 'フィード', 0.7)),
+            backgroundColor: posts.map(post => getPostTypeColor(post.postType || 'フィード', 0.1)),
+            borderWidth: 2,
+            borderDash: [5, 5],
+            fill: false,
+            tension: 0.4,
+            yAxisID: 'y',
+            pointBackgroundColor: posts.map(post => getPostTypeColor(post.postType || 'フィード', 0.7)),
+            pointBorderColor: posts.map(post => getPostTypeColor(post.postType || 'フィード')),
+            pointBorderWidth: 2,
+            pointRadius: 4
+          }, {
+            type: 'bar',
+            label: 'フォロワーリーチ',
+            data: posts.map(post => post.reachFollower || 0),
+            backgroundColor: posts.map(post => getPostTypeColor(post.postType || 'フィード', 0.6)),
+            borderColor: posts.map(post => getPostTypeColor(post.postType || 'フィード')),
+            borderWidth: 1,
+            yAxisID: 'y1',
+            stack: 'reach'
+          }, {
+            type: 'bar',
+            label: '非フォロワーリーチ',
+            data: posts.map(post => post.reachNonFollower || 0),
+            backgroundColor: posts.map(post => getPostTypeColor(post.postType || 'フィード', 0.3)),
+            borderColor: posts.map(post => getPostTypeColor(post.postType || 'フィード')),
+            borderWidth: 1,
+            yAxisID: 'y1',
+            stack: 'reach'
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          layout: {
+            padding: {
+              bottom: 40,
+              left: 10,
+              right: 10
+            }
+          },
+          plugins: {
+            legend: {
+              position: 'bottom',
+              labels: {
+                generateLabels: function(chart) {
+                  const original = Chart.defaults.plugins.legend.labels.generateLabels;
+                  const labels = original.call(this, chart);
+                  
+                  // 投稿タイプ凡例を追加
+                  const postTypeLabels = Object.keys(postTypeColors).map(type => ({
+                    text: `${type}投稿`,
+                    fillStyle: postTypeColors[type],
+                    strokeStyle: postTypeColors[type],
+                    lineWidth: 2,
+                    hidden: false,
+                    index: labels.length
+                  }));
+                  
+                  return [...labels, ...postTypeLabels];
+                }
+              }
+            },
+            title: {
+              display: true,
+              text: 'パフォーマンス総合分析（エンゲージメント + リーチ）'
+            },
+            tooltip: {
+              callbacks: {
+                afterLabel: function(context) {
+                  if (context.dataset.label.includes('リーチ')) {
+                    const postIndex = context.dataIndex;
+                    const followerReach = posts[postIndex]?.reachFollower || 0;
+                    const nonFollowerReach = posts[postIndex]?.reachNonFollower || 0;
+                    const totalReach = followerReach + nonFollowerReach;
+                    return `合計リーチ: ${totalReach.toLocaleString()}`;
+                  }
+                  return '';
+                }
+              }
+            }
+          },
+          scales: {
+            x: {
+              ticks: {
+                maxRotation: 0,
+                minRotation: 0,
+                font: {
+                  size: 9
+                },
+                padding: 5,
+                autoSkip: false
+              }
+            },
+            y: {
+              type: 'linear',
+              display: true,
+              position: 'left',
+              title: {
+                display: true,
+                text: 'エンゲージメント数'
+              },
+              beginAtZero: true,
+              ticks: {
+                callback: function(value) {
+                  return value.toLocaleString();
+                }
+              }
+            },
+            y1: {
+              type: 'linear',
+              display: true,
+              position: 'right',
+              title: {
+                display: true,
+                text: 'リーチ数'
+              },
+              beginAtZero: true,
+              grid: {
+                drawOnChartArea: false,
+              },
+              ticks: {
+                callback: function(value) {
+                  return value.toLocaleString();
+                }
+              }
+            }
+          }
+        }
+      });
+
+
+
+      // フォロワー数推移チャート（複合グラフ）
+      const ctx4 = document.getElementById('followerChart').getContext('2d');
+      
+      // 累積フォロワー数を計算
+      let cumulativeFollowers = <%= company.initial_followers || 0 %>; // 開始時フォロワー数
+      const followerData = posts.map(post => {
+        cumulativeFollowers += (post.newFollowers || 0);
+        return cumulativeFollowers;
+      });
+
+      new Chart(ctx4, {
+        data: {
+          labels: posts.map((post, index) => {
+            const date = new Date(post.date);
+            const dateStr = `${date.getMonth() + 1}/${date.getDate()}`;
+            const title = (post.title && post.title.length > 0) ? post.title : '投稿';
+            const genre = post.genre || '';
+            const postType = post.postType || 'フィード';
+            return [dateStr, title, genre, postType];
+          }),
+          datasets: [{
+            type: 'line',
+            label: '累積フォロワー数',
+            data: followerData,
+            borderColor: '#4299e1',
+            backgroundColor: 'rgba(66, 153, 225, 0.2)',
+            borderWidth: 3,
+            fill: true,
+            tension: 0.1,
+            pointBackgroundColor: posts.map(post => getPostTypeColor(post.postType || 'フィード')),
+            pointBorderColor: '#ffffff',
+            pointBorderWidth: 2,
+            pointRadius: 6,
+            yAxisID: 'y'
+          }, {
+            type: 'bar',
+            label: '月間新規フォロワー',
+            data: posts.map(post => post.newFollowers || 0),
+            backgroundColor: posts.map(post => getPostTypeColor(post.postType || 'フィード', 0.7)),
+            borderColor: posts.map(post => getPostTypeColor(post.postType || 'フィード')),
+            borderWidth: 1,
+            yAxisID: 'y1'
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          layout: {
+            padding: {
+              bottom: 40,
+              left: 10,
+              right: 10
+            }
+          },
+          scales: {
+            x: {
+              title: {
+                display: true,
+                text: '投稿日'
+              },
+              ticks: {
+                maxRotation: 0,
+                minRotation: 0,
+                font: {
+                  size: 9
+                },
+                padding: 5,
+                autoSkip: false
+              }
+            },
+            y: {
+              type: 'linear',
+              position: 'left',
+              beginAtZero: true,
+              title: {
+                display: true,
+                text: '累積フォロワー数（人）'
+              },
+              ticks: {
+                callback: function(value) {
+                  return value.toLocaleString() + '人';
+                }
+              }
+            },
+            y1: {
+              type: 'linear',
+              position: 'right',
+              beginAtZero: true,
+              title: {
+                display: true,
+                text: '新規獲得数（人）'
+              },
+              ticks: {
+                callback: function(value) {
+                  return '+' + value.toLocaleString() + '人';
+                }
+              },
+              grid: {
+                drawOnChartArea: false,
+              }
+            }
+          },
+          plugins: {
+            legend: {
+              position: 'bottom'
+            },
+            tooltip: {
+              callbacks: {
+                label: function(context) {
+                  const datasetLabel = context.dataset.label;
+                  const value = context.parsed.y;
+                  
+                  if (datasetLabel === '累積フォロワー数') {
+                    return `累積フォロワー: ${value.toLocaleString()}人`;
+                  } else {
+                    return `新規獲得: +${value.toLocaleString()}人`;
+                  }
+                }
+              }
+            }
+          }
+        }
+      });
+    }
+
+    function generateSummary(posts) {
+      const totalPosts = posts.length;
+      const avgLikes = totalPosts > 0 ? Math.round(posts.reduce((sum, post) => sum + (post.likes || 0), 0) / totalPosts) : 0;
+      const bestPost = posts.reduce((max, post) => (post.likes || 0) > (max.likes || 0) ? post : max, posts[0] || {});
+      
+      const summaryHtml = `
+        <div class="bg-blue-50 p-4 rounded-lg">
+          <h3 class="font-bold text-blue-800 mb-2">📈 パフォーマンストレンド</h3>
+          <p>今月は${totalPosts}件の投稿を行い、平均${avgLikes}いいねを獲得しました。</p>
+        </div>
+        <div class="bg-green-50 p-4 rounded-lg">
+          <h3 class="font-bold text-green-800 mb-2">🏆 最高パフォーマンス投稿</h3>
+          <p>${bestPost.title || '投稿'} (${bestPost.date}) が${(bestPost.likes || 0).toLocaleString()}いいねで最高の反響を得ました。</p>
+        </div>
+        <div class="bg-yellow-50 p-4 rounded-lg">
+          <h3 class="font-bold text-yellow-800 mb-2">💡 改善提案</h3>
+          <p>継続的な投稿とエンゲージメント向上により、さらなる成長が期待できます。</p>
+        </div>
+      `;
+      
+      document.getElementById('summaryComments').innerHTML = summaryHtml;
+    }
+
+    function generateNextMonthSuggestions(posts) {
+      // ジャンル別パフォーマンス分析
+      const genreStats = {};
+      posts.forEach(post => {
+        if (!genreStats[post.genre]) {
+          genreStats[post.genre] = { 
+            count: 0, 
+            totalLikes: 0, 
+            totalSaves: 0, 
+            totalReach: 0, 
+            totalEngagement: 0 
+          };
+        }
+        const stat = genreStats[post.genre];
+        stat.count++;
+        stat.totalLikes += (post.likes || 0);
+        stat.totalSaves += (post.saves || 0);
+        stat.totalReach += (post.reachTotal || 0);
+        stat.totalEngagement += (post.likes || 0) + (post.saves || 0);
+      });
+
+      // 最高パフォーマンスジャンルを特定
+      let bestGenre = '';
+      let bestAvgEngagement = 0;
+      let worstGenre = '';
+      let worstAvgEngagement = Infinity;
+
+      Object.keys(genreStats).forEach(genre => {
+        const avgEngagement = genreStats[genre].totalEngagement / genreStats[genre].count;
+        if (avgEngagement > bestAvgEngagement) {
+          bestAvgEngagement = avgEngagement;
+          bestGenre = genre;
+        }
+        if (avgEngagement < worstAvgEngagement) {
+          worstAvgEngagement = avgEngagement;
+          worstGenre = genre;
+        }
+      });
+
+      // 投稿頻度分析
+      const totalPosts = posts.length;
+      const recommendedPosts = Math.max(8, totalPosts + 2); // 最低8投稿、今月より2投稿増加推奨
+
+      // 曜日別パフォーマンス分析
+      const dayStats = {};
+      posts.forEach(post => {
+        const dayOfWeek = new Date(post.date).getDay();
+        const dayNames = ['日', '月', '火', '水', '木', '金', '土'];
+        const dayName = dayNames[dayOfWeek];
+        
+        if (!dayStats[dayName]) {
+          dayStats[dayName] = { count: 0, totalEngagement: 0 };
+        }
+        dayStats[dayName].count++;
+        dayStats[dayName].totalEngagement += (post.likes || 0) + (post.saves || 0);
+      });
+
+      let bestDay = '';
+      let bestDayEngagement = 0;
+      Object.keys(dayStats).forEach(day => {
+        const avgEngagement = dayStats[day].count > 0 ? dayStats[day].totalEngagement / dayStats[day].count : 0;
+        if (avgEngagement > bestDayEngagement) {
+          bestDayEngagement = avgEngagement;
+          bestDay = day;
+        }
+      });
+
+      // 提案生成
+      const suggestions = [];
+
+      // ジャンル提案
+      if (bestGenre) {
+        suggestions.push({
+          icon: '🎯',
+          title: `${bestGenre}コンテンツの強化`,
+          content: `${bestGenre}投稿が平均${Math.round(bestAvgEngagement)}エンゲージメントで最も効果的でした。来月は${bestGenre}コンテンツを${Math.ceil(recommendedPosts * 0.4)}投稿（全体の40%）に増やすことを提案します。`,
+          priority: 'high'
+        });
+      }
+
+      // 投稿頻度提案
+      suggestions.push({
+        icon: '📅',
+        title: '投稿頻度の最適化',
+        content: `今月は${totalPosts}投稿でした。より安定した成長のため、来月は${recommendedPosts}投稿（${Math.ceil(recommendedPosts/7)}投稿/週）を目標としましょう。`,
+        priority: 'medium'
+      });
+
+      // 投稿タイミング提案
+      if (bestDay) {
+        suggestions.push({
+          icon: '⏰',
+          title: '投稿タイミングの活用',
+          content: `${bestDay}曜日の投稿が平均${Math.round(bestDayEngagement)}エンゲージメントで最も反応が良いです。重要なコンテンツは${bestDay}曜日の投稿を優先しましょう。`,
+          priority: 'medium'
+        });
+      }
+
+      // 改善が必要なジャンルの提案
+      if (worstGenre && Object.keys(genreStats).length > 1) {
+        suggestions.push({
+          icon: '🔄',
+          title: `${worstGenre}コンテンツの改善`,
+          content: `${worstGenre}投稿の平均エンゲージメントが${Math.round(worstAvgEngagement)}と他より低めです。写真の撮影角度やキャプションの工夫で改善を図りましょう。`,
+          priority: 'low'
+        });
+      }
+
+      // 新しいコンテンツ形式の提案
+      const hasReels = posts.some(post => post.postType === 'リール');
+      const hasStories = posts.some(post => post.postType === 'ストーリーズ');
+      
+      if (!hasReels) {
+        suggestions.push({
+          icon: '🎬',
+          title: 'リール投稿の導入',
+          content: '今月はリール投稿がありませんでした。リールはリーチ拡大に効果的です。来月は2-3本のリール投稿にチャレンジしてみましょう。',
+          priority: 'medium'
+        });
+      }
+
+      if (!hasStories) {
+        suggestions.push({
+          icon: '📱',
+          title: 'ストーリーズ活用の提案',
+          content: '日常的な情報発信にストーリーズを活用し、フォロワーとの距離を縮めましょう。週2-3回のストーリーズ投稿を目標にしてみてください。',
+          priority: 'low'
+        });
+      }
+
+      // エンゲージメント向上施策
+      const avgLikes = totalPosts > 0 ? posts.reduce((sum, post) => sum + (post.likes || 0), 0) / totalPosts : 0;
+      const avgSaves = totalPosts > 0 ? posts.reduce((sum, post) => sum + (post.saves || 0), 0) / totalPosts : 0;
+
+      if (avgSaves < avgLikes * 0.1) { // 保存数がいいね数の10%未満の場合
+        suggestions.push({
+          icon: '💾',
+          title: '保存されやすいコンテンツの作成',
+          content: `保存数が少なめです（平均${Math.round(avgSaves)}保存）。役立つ情報や参考になる投稿を増やして、保存率向上を目指しましょう。`,
+          priority: 'medium'
+        });
+      }
+
+      // HTML生成
+      const suggestionsHtml = suggestions.map((suggestion, index) => {
+        const priorityColors = {
+          high: 'border-red-200 bg-red-50',
+          medium: 'border-yellow-200 bg-yellow-50', 
+          low: 'border-blue-200 bg-blue-50'
+        };
+        const priorityLabels = {
+          high: '優先度: 高',
+          medium: '優先度: 中',
+          low: '優先度: 低'
+        };
+        
+        return `
+          <div class="p-4 rounded-lg border-2 ${priorityColors[suggestion.priority]}">
+            <div class="flex items-start gap-3">
+              <span class="text-2xl">${suggestion.icon}</span>
+              <div class="flex-1">
+                <div class="flex justify-between items-start mb-2">
+                  <h3 class="font-bold text-gray-800">${suggestion.title}</h3>
+                  <span class="text-xs px-2 py-1 rounded-full bg-white bg-opacity-70 text-gray-600">${priorityLabels[suggestion.priority]}</span>
+                </div>
+                <p class="text-gray-700">${suggestion.content}</p>
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      // 来月のスケジュール提案も追加
+      const nextMonth = new Date();
+      nextMonth.setMonth(nextMonth.getMonth() + 1);
+      const nextMonthName = `${nextMonth.getFullYear()}年${nextMonth.getMonth() + 1}月`;
+
+      const scheduleHtml = `
+        <div class="p-4 rounded-lg border-2 border-green-200 bg-green-50 mt-4">
+          <div class="flex items-start gap-3">
+            <span class="text-2xl">📋</span>
+            <div class="flex-1">
+              <h3 class="font-bold text-green-800 mb-2">${nextMonthName}の投稿スケジュール案</h3>
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm text-green-700">
+                <div>• 週1-2回: ${bestGenre || '商品紹介'}投稿</div>
+                <div>• 週1回: お店紹介・雰囲気投稿</div>
+                <div>• 週1回: 人物・スタッフ紹介</div>
+                <div>• 月2-3回: ${hasReels ? 'リール投稿継続' : 'リール投稿を新規開始'}</div>
+                <div>• 毎日: ストーリーズでの日常発信</div>
+                <div>• 特別企画: ${bestGenre}の特集週間</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+
+      document.getElementById('nextMonthSuggestions').innerHTML = suggestionsHtml + scheduleHtml;
+    }
+
+    // ナビゲーション関数
+    function navigateToDataInput() {
+      const year = document.getElementById('yearSelect').value;
+      const month = document.getElementById('monthSelect').value;
+      const company = '<%= company.id %>';
+      window.location.href = `/add-post-grid?company=${company}&year=${year}&month=${month}`;
+    }
+
+    function navigateToAnalytics() {
+      const year = document.getElementById('yearSelect').value;
+      const month = document.getElementById('monthSelect').value;
+      const company = '<%= company.id %>';
+      window.location.href = `/analytics?company=${company}&year=${year}&month=${month}`;
+    }
+  </script>
+</body>
+</html>

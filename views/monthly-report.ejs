@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>月次レポート <%= year %>年<%= month %>月 - Instagram運用分析</title>
+  <link rel="stylesheet" href="/style.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>月次レポート</h1>
+      <nav>
+        <a href="/" class="btn btn-link">ホーム</a>
+        <a href="/posts" class="btn btn-link">投稿一覧</a>
+        <a href="/analytics" class="btn btn-link">分析</a>
+        <a href="/goals" class="btn btn-link">目標設定</a>
+      </nav>
+    </header>
+    
+    <main>
+      <div class="report-header">
+        <div class="report-title">
+          <h2><%= year %>年<%= month %>月 運用レポート</h2>
+          <div class="report-actions">
+            <form class="month-selector" method="GET">
+              <select name="year" onchange="this.form.submit()">
+                <% for (let i = 2024; i <= new Date().getFullYear(); i++) { %>
+                  <option value="<%= i %>" <%= year === i ? 'selected' : '' %>><%= i %>年</option>
+                <% } %>
+              </select>
+              <select name="month" onchange="this.form.submit()">
+                <% for (let i = 1; i <= 12; i++) { %>
+                  <option value="<%= i %>" <%= month === i ? 'selected' : '' %>><%= i %>月</option>
+                <% } %>
+              </select>
+            </form>
+            <a href="/reports/pdf?year=<%= year %>&month=<%= month %>" class="btn btn-primary" target="_blank">
+              📄 PDFダウンロード
+            </a>
+          </div>
+        </div>
+      </div>
+
+      <% if (reportData.summary.totalPosts > 0) { %>
+        <!-- パフォーマンスサマリー -->
+        <div class="report-section">
+          <h3>📊 パフォーマンスサマリー</h3>
+          <div class="report-summary-grid">
+            <div class="summary-card large">
+              <div class="summary-icon">📈</div>
+              <div class="summary-content">
+                <div class="summary-number"><%= reportData.summary.totalPosts %></div>
+                <div class="summary-label">総投稿数</div>
+              </div>
+            </div>
+            
+            <div class="summary-card large">
+              <div class="summary-icon">❤️</div>
+              <div class="summary-content">
+                <div class="summary-number"><%= reportData.summary.totalLikes.toLocaleString() %></div>
+                <div class="summary-label">総いいね数</div>
+              </div>
+            </div>
+            
+            <div class="summary-card large">
+              <div class="summary-icon">💬</div>
+              <div class="summary-content">
+                <div class="summary-number"><%= reportData.summary.totalComments.toLocaleString() %></div>
+                <div class="summary-label">総コメント数</div>
+              </div>
+            </div>
+            
+            <div class="summary-card large">
+              <div class="summary-icon">🔖</div>
+              <div class="summary-content">
+                <div class="summary-number"><%= reportData.summary.totalSaves.toLocaleString() %></div>
+                <div class="summary-label">総保存数</div>
+              </div>
+            </div>
+            
+            <div class="summary-card large">
+              <div class="summary-icon">⚡</div>
+              <div class="summary-content">
+                <div class="summary-number"><%= reportData.summary.avgEngagement.toLocaleString() %></div>
+                <div class="summary-label">平均エンゲージメント</div>
+              </div>
+            </div>
+            
+            <div class="summary-card large">
+              <div class="summary-icon">👥</div>
+              <div class="summary-content">
+                <div class="summary-number <%= reportData.summary.followersGrowth >= 0 ? 'positive' : 'negative' %>">
+                  <%= reportData.summary.followersGrowth >= 0 ? '+' : '' %><%= reportData.summary.followersGrowth %>%
+                </div>
+                <div class="summary-label">フォロワー成長率</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- フォロワー推移グラフ -->
+        <div class="report-section">
+          <h3>👥 フォロワー数推移</h3>
+          <div class="follower-charts-container">
+            <div class="chart-section">
+              <div class="chart-header">
+                <h4>週次フォロワー増加数</h4>
+                <p class="chart-description">1週間ごとのフォロワー増加数</p>
+              </div>
+              <div class="chart-container">
+                <canvas id="weeklyGrowthChart"></canvas>
+              </div>
+            </div>
+            
+            <div class="chart-section">
+              <div class="chart-header">
+                <h4>総フォロワー数推移</h4>
+                <p class="chart-description">月内の総フォロワー数の変化</p>
+              </div>
+              <div class="chart-container">
+                <canvas id="totalFollowersChart"></canvas>
+              </div>
+            </div>
+          </div>
+          
+          <!-- フォロワー履歴入力フォーム -->
+          <div class="follower-input-section">
+            <h4>📝 フォロワー数を記録</h4>
+            <form class="follower-input-form" action="/follower-history" method="POST">
+              <div class="input-group">
+                <label for="date">日付</label>
+                <input type="date" id="date" name="date" required>
+              </div>
+              <div class="input-group">
+                <label for="followers_count">フォロワー数</label>
+                <input type="number" id="followers_count" name="followers_count" min="0" placeholder="例: 1250" required>
+              </div>
+              <button type="submit" class="btn btn-success">記録を追加</button>
+            </form>
+          </div>
+        </div>
+
+        <!-- ベスト投稿 -->
+        <% if (reportData.summary.bestPost) { %>
+          <div class="report-section">
+            <h3>🏆 今月のベスト投稿</h3>
+            <div class="best-post-card">
+              <div class="best-post-info">
+                <div class="best-post-date">
+                  <%= reportData.summary.bestPost.post_date %> <%= reportData.summary.bestPost.post_time %>
+                </div>
+                <div class="best-post-type">
+                  <%= reportData.summary.bestPost.post_type === 'image' ? '📷 画像' : 
+                      reportData.summary.bestPost.post_type === 'reel' ? '🎬 リール' : '📖 ストーリー' %>
+                </div>
+              </div>
+              <div class="best-post-stats">
+                <span class="stat">❤️ <%= (reportData.summary.bestPost.likes || 0).toLocaleString() %></span>
+                <span class="stat">💬 <%= (reportData.summary.bestPost.comments || 0).toLocaleString() %></span>
+                <span class="stat">🔖 <%= (reportData.summary.bestPost.saves || 0).toLocaleString() %></span>
+              </div>
+              <% if (reportData.summary.bestPost.caption) { %>
+                <div class="best-post-caption">
+                  "<%= reportData.summary.bestPost.caption.substring(0, 100) %><%= reportData.summary.bestPost.caption.length > 100 ? '...' : '' %>"
+                </div>
+              <% } %>
+            </div>
+          </div>
+        <% } %>
+
+        <!-- インサイト -->
+        <div class="report-section">
+          <h3>💡 今月のインサイト</h3>
+          <div class="insights-container">
+            <% reportData.insights.forEach((insight, index) => { %>
+              <div class="insight-item">
+                <div class="insight-number"><%= index + 1 %></div>
+                <div class="insight-text"><%= insight %></div>
+              </div>
+            <% }) %>
+          </div>
+        </div>
+
+        <!-- 改善提案 -->
+        <div class="report-section">
+          <h3>🚀 改善提案</h3>
+          <div class="recommendations-container">
+            <% reportData.recommendations.forEach((recommendation, index) => { %>
+              <div class="recommendation-item">
+                <div class="recommendation-icon">💡</div>
+                <div class="recommendation-text"><%= recommendation %></div>
+              </div>
+            <% }) %>
+          </div>
+        </div>
+
+        <!-- 投稿一覧（サマリー） -->
+        <div class="report-section">
+          <h3>📝 今月の投稿一覧</h3>
+          <div class="posts-summary-table">
+            <div class="posts-header">
+              <span>日時</span>
+              <span>タイプ</span>
+              <span>いいね</span>
+              <span>コメント</span>
+              <span>保存</span>
+              <span>エンゲージメント</span>
+            </div>
+            <% reportData.posts.slice(0, 10).forEach(post => { %>
+              <div class="post-summary-row">
+                <span class="post-date"><%= post.post_date %> <%= post.post_time %></span>
+                <span class="post-type">
+                  <%= post.post_type === 'image' ? '📷' : post.post_type === 'reel' ? '🎬' : '📖' %>
+                </span>
+                <span class="post-stat"><%= (post.likes || 0).toLocaleString() %></span>
+                <span class="post-stat"><%= (post.comments || 0).toLocaleString() %></span>
+                <span class="post-stat"><%= (post.saves || 0).toLocaleString() %></span>
+                <span class="post-engagement">
+                  <%= ((post.likes || 0) + (post.comments || 0) + (post.saves || 0)).toLocaleString() %>
+                </span>
+              </div>
+            <% }) %>
+            <% if (reportData.posts.length > 10) { %>
+              <div class="posts-more">
+                他 <%= reportData.posts.length - 10 %> 件の投稿
+              </div>
+            <% } %>
+          </div>
+        </div>
+
+      <% } else { %>
+        <div class="no-data-message">
+          <h2><%= year %>年<%= month %>月のデータがありません</h2>
+          <p>この月に投稿データがまだ入力されていません</p>
+          <div class="report-actions">
+            <a href="/add-post" class="btn btn-primary">投稿データを追加</a>
+            <form class="month-selector" method="GET" style="margin-top: 1rem;">
+              <label>他の月を表示:</label>
+              <select name="year" onchange="this.form.submit()">
+                <% for (let i = 2024; i <= new Date().getFullYear(); i++) { %>
+                  <option value="<%= i %>" <%= year === i ? 'selected' : '' %>><%= i %>年</option>
+                <% } %>
+              </select>
+              <select name="month" onchange="this.form.submit()">
+                <% for (let i = 1; i <= 12; i++) { %>
+                  <option value="<%= i %>" <%= month === i ? 'selected' : '' %>><%= i %>月</option>
+                <% } %>
+              </select>
+            </form>
+          </div>
+        </div>
+      <% } %>
+    </main>
+  </div>
+
+  <script>
+    // ページ読み込み時にグラフを初期化
+    document.addEventListener('DOMContentLoaded', function() {
+      <% if (reportData.summary.totalPosts > 0) { %>
+        initializeFollowerCharts();
+      <% } %>
+    });
+
+    async function initializeFollowerCharts() {
+      try {
+        const response = await fetch('/api/follower-chart-data?year=<%= year %>&month=<%= month %>');
+        const data = await response.json();
+        
+        if (data.followerGrowth && data.weeklyGrowthData) {
+          createWeeklyGrowthChart(data.weeklyGrowthData);
+          createTotalFollowersChart(data.followerGrowth);
+        }
+      } catch (error) {
+        console.error('フォロワーデータの取得に失敗しました:', error);
+      }
+    }
+
+    // 週次フォロワー増加数グラフ（棒グラフ）
+    function createWeeklyGrowthChart(data) {
+      const ctx = document.getElementById('weeklyGrowthChart').getContext('2d');
+      new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: data.labels,
+          datasets: [{
+            label: '週次フォロワー増加数',
+            data: data.data,
+            backgroundColor: data.data.map(value => 
+              value >= 0 ? 'rgba(40, 167, 69, 0.8)' : 'rgba(220, 53, 69, 0.8)'
+            ),
+            borderColor: data.data.map(value => 
+              value >= 0 ? '#28a745' : '#dc3545'
+            ),
+            borderWidth: 2,
+            borderRadius: 6,
+            borderSkipped: false,
+          }]
+        },
+        options: {
+          responsive: true,
+          plugins: {
+            legend: {
+              display: false
+            },
+            tooltip: {
+              callbacks: {
+                label: function(context) {
+                  const value = context.parsed.y;
+                  return `${value >= 0 ? '+' : ''}${value} フォロワー`;
+                }
+              }
+            }
+          },
+          scales: {
+            y: {
+              beginAtZero: true,
+              grid: {
+                color: 'rgba(0, 0, 0, 0.1)'
+              },
+              ticks: {
+                callback: function(value) {
+                  return value >= 0 ? '+' + value : value;
+                }
+              }
+            },
+            x: {
+              grid: {
+                display: false
+              }
+            }
+          }
+        }
+      });
+    }
+
+    // 総フォロワー数推移グラフ（線グラフ）
+    function createTotalFollowersChart(data) {
+      const ctx = document.getElementById('totalFollowersChart').getContext('2d');
+      new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: data.labels,
+          datasets: [{
+            label: '総フォロワー数',
+            data: data.totalFollowers,
+            borderColor: '#667eea',
+            backgroundColor: 'rgba(102, 126, 234, 0.1)',
+            borderWidth: 3,
+            fill: true,
+            tension: 0.4,
+            pointBackgroundColor: '#667eea',
+            pointBorderColor: '#ffffff',
+            pointBorderWidth: 2,
+            pointRadius: 6,
+            pointHoverRadius: 8
+          }]
+        },
+        options: {
+          responsive: true,
+          plugins: {
+            legend: {
+              display: false
+            },
+            tooltip: {
+              callbacks: {
+                label: function(context) {
+                  return `${context.parsed.y.toLocaleString()} フォロワー`;
+                }
+              }
+            }
+          },
+          scales: {
+            y: {
+              beginAtZero: false,
+              grid: {
+                color: 'rgba(0, 0, 0, 0.1)'
+              },
+              ticks: {
+                callback: function(value) {
+                  return value.toLocaleString();
+                }
+              }
+            },
+            x: {
+              grid: {
+                color: 'rgba(0, 0, 0, 0.1)'
+              }
+            }
+          }
+        }
+      });
+    }
+  </script>
+</body>
+</html>

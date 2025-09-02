@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>クライアント管理 - SNS運用代行管理システム</title>
+  <link rel="stylesheet" href="/style.css">
+  <style>
+    .company-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 20px;
+      margin-top: 20px;
+    }
+    
+    .company-card {
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      padding: 20px;
+      background: white;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+      transition: box-shadow 0.2s;
+    }
+    
+    .company-card:hover {
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+    
+    .company-header {
+      display: flex;
+      justify-content: between;
+      align-items: start;
+      margin-bottom: 15px;
+    }
+    
+    .company-name {
+      font-size: 18px;
+      font-weight: bold;
+      color: #1f2937;
+      margin-bottom: 5px;
+    }
+    
+    .company-industry {
+      color: #6b7280;
+      font-size: 14px;
+    }
+    
+    .company-details {
+      margin-bottom: 15px;
+    }
+    
+    .detail-item {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 8px;
+      font-size: 14px;
+    }
+    
+    .detail-label {
+      color: #6b7280;
+    }
+    
+    .detail-value {
+      font-weight: 500;
+      color: #1f2937;
+    }
+    
+    .company-actions {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    
+    .btn-sm {
+      padding: 6px 12px;
+      font-size: 12px;
+    }
+    
+    .add-company-section {
+      text-align: center;
+      margin-bottom: 30px;
+    }
+    
+    .no-companies {
+      text-align: center;
+      padding: 40px;
+      color: #6b7280;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>クライアント管理</h1>
+      <nav>
+        <a href="/" class="btn btn-link">ホーム</a>
+      </nav>
+    </header>
+    
+    <main>
+      <div class="add-company-section">
+        <h2>登録済みクライアントの管理</h2>
+        <p>SNS運用代行を行っているクライアント企業の情報を管理できます</p>
+        <a href="/companies/add" class="btn btn-primary">+ 新しいクライアントを登録</a>
+      </div>
+      
+      <% if (companies && companies.length > 0) { %>
+        <div class="company-grid">
+          <% companies.forEach(company => { %>
+            <div class="company-card">
+              <div class="company-header">
+                <div>
+                  <div class="company-name"><%= company.company_name %></div>
+                  <div class="company-industry"><%= company.industry %></div>
+                </div>
+              </div>
+              
+              <div class="company-details">
+                <div class="detail-item">
+                  <span class="detail-label">ID:</span>
+                  <span class="detail-value"><%= company.id %></span>
+                </div>
+                <div class="detail-item">
+                  <span class="detail-label">運用開始日:</span>
+                  <span class="detail-value"><%= company.start_date %></span>
+                </div>
+                <div class="detail-item">
+                  <span class="detail-label">開始時フォロワー:</span>
+                  <span class="detail-value"><%= company.initial_followers.toLocaleString() %></span>
+                </div>
+              </div>
+              
+              <div class="company-actions">
+                <a href="/add-post-grid?company=<%= company.id %>" class="btn btn-primary btn-sm">データ入力</a>
+                <a href="/analytics?company=<%= company.id %>" class="btn btn-success btn-sm">分析</a>
+                <a href="/companies/edit/<%= company.id %>" class="btn btn-secondary btn-sm">編集</a>
+                <button onclick="deleteCompany('<%= company.id %>')" class="btn btn-danger btn-sm">削除</button>
+              </div>
+            </div>
+          <% }); %>
+        </div>
+      <% } else { %>
+        <div class="no-companies">
+          <h3>登録されたクライアントがありません</h3>
+          <p>まずクライアント企業の情報を登録してください</p>
+        </div>
+      <% } %>
+    </main>
+  </div>
+
+  <script>
+    async function deleteCompany(companyId) {
+      if (!confirm(`クライアント「${companyId}」とその投稿データを削除しますか？この操作は元に戻せません。`)) {
+        return;
+      }
+      
+      try {
+        const response = await fetch(`/companies/${companyId}`, {
+          method: 'DELETE'
+        });
+        
+        if (response.ok) {
+          alert('クライアントを削除しました');
+          window.location.reload();
+        } else {
+          throw new Error('削除に失敗しました');
+        }
+      } catch (error) {
+        alert('削除エラー: ' + error.message);
+      }
+    }
+  </script>
+</body>
+</html>

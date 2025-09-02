@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>分析ダッシュボード - SNS運用代行管理システム</title>
+  <link rel="stylesheet" href="/style.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>分析ダッシュボード - <%= company || 'default' %></h1>
+      <nav>
+        <a href="/" class="btn btn-link">ホーム</a>
+        <div class="company-nav-inline">
+          <select id="companySelect" onchange="changeCompany()">
+            <!-- 動的に生成 -->
+          </select>
+        </div>
+        <div class="month-selector-nav">
+          <label for="yearSelect">年:</label>
+          <select id="yearSelect" onchange="changeMonthYear()">
+            <% for(let y = 2020; y <= new Date().getFullYear() + 1; y++) { %>
+              <option value="<%= y %>" <%= y === (year || new Date().getFullYear()) ? 'selected' : '' %>><%= y %></option>
+            <% } %>
+          </select>
+          <label for="monthSelect">月:</label>
+          <select id="monthSelect" onchange="changeMonthYear()">
+            <% for(let m = 1; m <= 12; m++) { %>
+              <option value="<%= m %>" <%= m === (month || (new Date().getMonth() + 1)) ? 'selected' : '' %>><%= m %>月</option>
+            <% } %>
+          </select>
+        </div>
+        <a href="#" onclick="navigateToDataInput()" class="btn btn-success">📝 データ入力</a>
+        <a href="#" onclick="navigateToReport()" class="btn btn-primary">📋 レポート</a>
+        <a href="/goals" class="btn btn-link">目標設定</a>
+      </nav>
+    </header>
+    
+    <main>
+      <% if (posts && posts.length > 0) { %>
+        <div class="analytics-summary">
+          <div class="summary-card">
+            <h3>総投稿数</h3>
+            <span class="summary-number"><%= posts.length %></span>
+          </div>
+          <div class="summary-card">
+            <h3>平均いいね数</h3>
+            <span class="summary-number">
+              <%= Math.round(posts.reduce((sum, post) => sum + (post.likes || 0), 0) / posts.length) %>
+            </span>
+          </div>
+          <div class="summary-card">
+            <h3>平均エンゲージメント</h3>
+            <span class="summary-number">
+              <%= Math.round(posts.reduce((sum, post) => sum + (post.likes || 0) + (post.saves || 0), 0) / posts.length) %>
+            </span>
+          </div>
+          <div class="summary-card">
+            <h3>平均リーチ数</h3>
+            <span class="summary-number">
+              <%= Math.round(posts.reduce((sum, post) => sum + (post.reach_total || 0), 0) / posts.length) %>
+            </span>
+          </div>
+          <div class="summary-card">
+            <h3>最高いいね数</h3>
+            <span class="summary-number">
+              <%= Math.max(...posts.map(post => post.likes || 0)) %>
+            </span>
+          </div>
+        </div>
+
+        <div class="charts-container">
+          <div class="chart-section">
+            <div class="chart-header">
+              <h2>いいね数推移（最近30投稿）</h2>
+              <p class="chart-description">投稿のいいね数の推移を確認できます</p>
+            </div>
+            <div class="chart-container">
+              <canvas id="likesChart"></canvas>
+            </div>
+          </div>
+
+          <div class="chart-section">
+            <div class="chart-header">
+              <h2>ジャンル別パフォーマンス比較</h2>
+              <p class="chart-description">商品紹介、お店紹介、人物のパフォーマンス比較</p>
+            </div>
+            <div class="chart-container">
+              <canvas id="genreChart"></canvas>
+            </div>
+          </div>
+
+          <div class="chart-section">
+            <div class="chart-header">
+              <h2>リーチ分析（フォロワー vs 非フォロワー）</h2>
+              <p class="chart-description">フォロワーと非フォロワーのリーチ数比較</p>
+            </div>
+            <div class="chart-container">
+              <canvas id="reachChart"></canvas>
+            </div>
+          </div>
+
+          <div class="chart-section">
+            <div class="chart-header">
+              <h2>エンゲージメント分析</h2>
+              <p class="chart-description">フォロワー・非フォロワー別エンゲージメント推移</p>
+            </div>
+            <div class="chart-container">
+              <canvas id="engagementChart"></canvas>
+            </div>
+          </div>
+        </div>
+
+        <div class="insights-section">
+          <h2>📊 分析インサイト</h2>
+          <div class="insights-grid" id="insights">
+            <!-- JavaScriptで動的に生成 -->
+          </div>
+        </div>
+
+      <% } else { %>
+        <div class="no-data-message">
+          <h2>分析データがありません</h2>
+          <p>投稿データを入力すると、詳細な分析グラフが表示されます</p>
+          <a href="/add-post" class="btn btn-primary">投稿データを追加</a>
+        </div>
+      <% } %>
+    </main>
+  </div>
+
+  <script>
+    // ページ読み込み時にグラフを初期化
+    document.addEventListener('DOMContentLoaded', async function() {
+      await loadCompanyList();
+      <% if (posts && posts.length > 0) { %>
+        initializeCharts();
+      <% } %>
+    });
+
+    async function initializeCharts() {
+      try {
+        const company = document.getElementById('companySelect').value;
+        const year = document.getElementById('yearSelect').value;
+        const month = document.getElementById('monthSelect').value;
+        const response = await fetch(`/api/analytics-data?company=${company}&year=${year}&month=${month}`);
+        const data = await response.json();
+        
+        createLikesChart(data.likesOverTime);
+        createGenreChart(data.genreComparison);
+        createReachChart(data.reachAnalysis);
+        createEngagementChart(data.engagementAnalysis);
+        generateInsights(data);
+      } catch (error) {
+        console.error('データの取得に失敗しました:', error);
+      }
+    }
+    
+    function changeCompany() {
+      const company = document.getElementById('companySelect').value;
+      const year = document.getElementById('yearSelect').value;
+      const month = document.getElementById('monthSelect').value;
+      window.location.href = `/analytics?company=${company}&year=${year}&month=${month}`;
+    }
+    
+    function changeMonthYear() {
+      const company = document.getElementById('companySelect').value;
+      const year = document.getElementById('yearSelect').value;
+      const month = document.getElementById('monthSelect').value;
+      window.location.href = `/analytics?company=${company}&year=${year}&month=${month}`;
+    }
+    
+    // 会社リストを読み込んでセレクトボックスに設定
+    async function loadCompanyList() {
+      try {
+        const response = await fetch('/api/companies');
+        const companies = await response.json();
+        
+        const companySelect = document.getElementById('companySelect');
+        companySelect.innerHTML = '<option value="default">デフォルト</option>';
+        
+        companies.forEach(company => {
+          const option = document.createElement('option');
+          option.value = company.id;
+          option.textContent = company.company_name;
+          option.selected = company.id === '<%= company || "default" %>';
+          companySelect.appendChild(option);
+        });
+      } catch (error) {
+        console.error('会社リストの読み込みに失敗:', error);
+      }
+    }
+
+    // いいね数推移グラフ
+    function createLikesChart(data) {
+      const ctx = document.getElementById('likesChart').getContext('2d');
+      new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: data.labels,
+          datasets: [{
+            label: 'いいね数',
+            data: data.data,
+            borderColor: '#667eea',
+            backgroundColor: 'rgba(102, 126, 234, 0.1)',
+            borderWidth: 3,
+            fill: true,
+            tension: 0.4
+          }]
+        },
+        options: {
+          responsive: true,
+          plugins: {
+            legend: {
+              display: false
+            }
+          },
+          scales: {
+            y: {
+              beginAtZero: true,
+              grid: {
+                color: 'rgba(0, 0, 0, 0.1)'
+              }
+            },
+            x: {
+              grid: {
+                color: 'rgba(0, 0, 0, 0.1)'
+              }
+            }
+          }
+        }
+      });
+    }
+
+    // ジャンル別比較グラフ
+    function createGenreChart(data) {
+      const ctx = document.getElementById('genreChart').getContext('2d');
+      new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: data.labels,
+          datasets: [{
+            label: '平均いいね数',
+            data: data.avgLikes,
+            backgroundColor: ['#FF6B6B', '#4ECDC4', '#45B7D1'],
+            borderRadius: 8,
+            borderSkipped: false,
+          }, {
+            label: '平均保存数',
+            data: data.avgSaves,
+            backgroundColor: ['#FFA726', '#66BB6A', '#AB47BC'],
+            borderRadius: 8,
+            borderSkipped: false,
+          }]
+        },
+        options: {
+          responsive: true,
+          plugins: {
+            legend: {
+              display: true
+            }
+          },
+          scales: {
+            y: {
+              beginAtZero: true,
+              grid: {
+                color: 'rgba(0, 0, 0, 0.1)'
+              }
+            },
+            x: {
+              grid: {
+                display: false
+              }
+            }
+          }
+        }
+      });
+    }
+
+    // リーチ分析グラフ
+    function createReachChart(data) {
+      const ctx = document.getElementById('reachChart').getContext('2d');
+      new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: data.labels,
+          datasets: [{
+            label: 'フォロワーリーチ',
+            data: data.followerReach,
+            borderColor: '#667eea',
+            backgroundColor: 'rgba(102, 126, 234, 0.1)',
+            borderWidth: 3,
+            fill: false,
+            tension: 0.4
+          }, {
+            label: '非フォロワーリーチ',
+            data: data.nonFollowerReach,
+            borderColor: '#f093fb',
+            backgroundColor: 'rgba(240, 147, 251, 0.1)',
+            borderWidth: 3,
+            fill: false,
+            tension: 0.4
+          }]
+        },
+        options: {
+          responsive: true,
+          plugins: {
+            legend: {
+              display: true
+            }
+          },
+          scales: {
+            y: {
+              beginAtZero: true,
+              grid: {
+                color: 'rgba(0, 0, 0, 0.1)'
+              }
+            },
+            x: {
+              grid: {
+                color: 'rgba(0, 0, 0, 0.1)'
+              }
+            }
+          }
+        }
+      });
+    }
+
+    // エンゲージメント分析グラフ
+    function createEngagementChart(data) {
+      const ctx = document.getElementById('engagementChart').getContext('2d');
+      new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: data.labels,
+          datasets: [{
+            label: 'フォロワーENG',
+            data: data.followerEng,
+            backgroundColor: 'rgba(102, 126, 234, 0.8)',
+            borderRadius: 4,
+            borderSkipped: false,
+          }, {
+            label: '非フォロワーENG',
+            data: data.nonFollowerEng,
+            backgroundColor: 'rgba(240, 147, 251, 0.8)',
+            borderRadius: 4,
+            borderSkipped: false,
+          }]
+        },
+        options: {
+          responsive: true,
+          plugins: {
+            legend: {
+              display: true
+            }
+          },
+          scales: {
+            x: {
+              stacked: true,
+              grid: {
+                display: false
+              }
+            },
+            y: {
+              stacked: true,
+              beginAtZero: true,
+              grid: {
+                color: 'rgba(0, 0, 0, 0.1)'
+              }
+            }
+          }
+        }
+      });
+    }
+
+    // インサイト生成
+    function generateInsights(data) {
+      const insights = [];
+      
+      // 最良ジャンルの分析
+      if (data.genreComparison.avgLikes.length > 0) {
+        const maxGenreIndex = data.genreComparison.avgLikes.indexOf(Math.max(...data.genreComparison.avgLikes));
+        const bestGenre = data.genreComparison.labels[maxGenreIndex];
+        insights.push({
+          icon: '📈',
+          title: '効果的なジャンル',
+          content: `${bestGenre}投稿が平均${data.genreComparison.avgLikes[maxGenreIndex]}いいねを獲得しています。`
+        });
+      }
+
+      // リーチ分析
+      if (data.reachAnalysis.followerReach.length > 0 && data.reachAnalysis.nonFollowerReach.length > 0) {
+        const totalFollowerReach = data.reachAnalysis.followerReach.reduce((a, b) => a + b, 0);
+        const totalNonFollowerReach = data.reachAnalysis.nonFollowerReach.reduce((a, b) => a + b, 0);
+        const nonFollowerRatio = Math.round((totalNonFollowerReach / (totalFollowerReach + totalNonFollowerReach)) * 100);
+        
+        insights.push({
+          icon: '🎯',
+          title: 'リーチ分析',
+          content: `非フォロワーからのリーチが${nonFollowerRatio}%を占めています。新規ユーザーへの露出が良好です。`
+        });
+      }
+
+      // パフォーマンストレンド
+      if (data.likesOverTime.data.length >= 5) {
+        const recent5 = data.likesOverTime.data.slice(-5);
+        const previous5 = data.likesOverTime.data.slice(-10, -5);
+        const recentAvg = recent5.reduce((a, b) => a + b, 0) / recent5.length;
+        const previousAvg = previous5.reduce((a, b) => a + b, 0) / previous5.length;
+        
+        if (recentAvg > previousAvg) {
+          insights.push({
+            icon: '🚀',
+            title: 'パフォーマンス向上',
+            content: `最近の投稿パフォーマンスが${Math.round(((recentAvg - previousAvg) / previousAvg) * 100)}%向上しています。`
+          });
+        } else if (recentAvg < previousAvg) {
+          insights.push({
+            icon: '📉',
+            title: 'パフォーマンス低下',
+            content: `最近のパフォーマンスが${Math.round(((previousAvg - recentAvg) / previousAvg) * 100)}%低下しています。コンテンツの見直しを検討してください。`
+          });
+        }
+      }
+
+      // エンゲージメント分析
+      if (data.engagementAnalysis.followerEng.length > 0) {
+        const avgFollowerEng = data.engagementAnalysis.followerEng.reduce((a, b) => a + b, 0) / data.engagementAnalysis.followerEng.length;
+        const avgNonFollowerEng = data.engagementAnalysis.nonFollowerEng.reduce((a, b) => a + b, 0) / data.engagementAnalysis.nonFollowerEng.length;
+        
+        if (avgNonFollowerEng > avgFollowerEng) {
+          insights.push({
+            icon: '✨',
+            title: 'エンゲージメント分析',
+            content: `非フォロワーからのエンゲージメントが高く、コンテンツの拡散性が良好です。`
+          });
+        } else {
+          insights.push({
+            icon: '💪',
+            title: 'エンゲージメント分析',
+            content: `既存フォロワーからの反応が良好です。継続的な関係構築ができています。`
+          });
+        }
+      }
+
+      // インサイトを表示
+      const insightsContainer = document.getElementById('insights');
+      insightsContainer.innerHTML = insights.map(insight => `
+        <div class="insight-card">
+          <div class="insight-icon">${insight.icon}</div>
+          <h3>${insight.title}</h3>
+          <p>${insight.content}</p>
+        </div>
+      `).join('');
+    }
+
+    // ナビゲーション関数
+    function navigateToDataInput() {
+      const company = document.getElementById('companySelect').value;
+      const year = document.getElementById('yearSelect').value;
+      const month = document.getElementById('monthSelect').value;
+      window.location.href = `/add-post-grid?company=${company}&year=${year}&month=${month}`;
+    }
+
+    function navigateToReport() {
+      const company = document.getElementById('companySelect').value;
+      const year = document.getElementById('yearSelect').value;
+      const month = document.getElementById('monthSelect').value;
+      window.location.href = `/report/${company}?year=${year}&month=${month}`;
+    }
+  </script>
+</body>
+</html>

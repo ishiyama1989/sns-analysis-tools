@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SNS運用代行管理システム</title>
+  <link rel="stylesheet" href="/style.css">
+  <style>
+    body {
+      background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+      min-height: 100vh;
+      margin: 0;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+    
+    .hero-section {
+      text-align: center;
+      padding: 5px 20px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border-radius: 20px;
+      margin-bottom: 40px;
+      box-shadow: 0 20px 40px rgba(102, 126, 234, 0.3);
+      position: relative;
+      overflow: hidden;
+    }
+    
+    .hero-section::before {
+      content: '';
+      position: absolute;
+      top: -50%;
+      left: -50%;
+      width: 200%;
+      height: 200%;
+      background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 50%);
+      animation: float 20s infinite linear;
+    }
+    
+    @keyframes float {
+      0% { transform: translateX(-100%) rotate(0deg); }
+      100% { transform: translateX(100%) rotate(360deg); }
+    }
+    
+    .hero-title {
+      font-size: 2.5rem;
+      margin-bottom: 10px;
+      font-weight: bold;
+    }
+    
+    .hero-subtitle {
+      font-size: 1.2rem;
+      opacity: 0.9;
+    }
+    
+    .companies-section {
+      margin-bottom: 40px;
+    }
+    
+    .section-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+    
+    .section-title {
+      font-size: 1.8rem;
+      color: #1f2937;
+    }
+    
+    .company-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+      gap: 20px;
+    }
+    
+    .company-card {
+      border: none;
+      border-radius: 20px;
+      padding: 28px;
+      background: linear-gradient(145deg, #ffffff 0%, #f8fafc 100%);
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
+      transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+      cursor: pointer;
+      position: relative;
+      overflow: hidden;
+    }
+    
+    .company-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(102, 126, 234, 0.1), transparent);
+      transition: left 0.6s;
+    }
+    
+    .company-card:hover::before {
+      left: 100%;
+    }
+    
+    .company-card:hover {
+      box-shadow: 0 20px 60px rgba(102, 126, 234, 0.25);
+      transform: translateY(-8px) scale(1.02);
+      background: linear-gradient(145deg, #ffffff 0%, #f0f9ff 100%);
+    }
+    
+    .company-name {
+      font-size: 1.4rem;
+      font-weight: bold;
+      color: #1f2937;
+      margin-bottom: 8px;
+    }
+    
+    .company-industry {
+      color: #667eea;
+      font-weight: 500;
+      margin-bottom: 16px;
+      font-size: 0.9rem;
+    }
+    
+    .company-details {
+      margin-bottom: 20px;
+    }
+    
+    .detail-row {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 8px;
+      font-size: 0.9rem;
+    }
+    
+    .detail-label {
+      color: #6b7280;
+    }
+    
+    .detail-value {
+      font-weight: 500;
+      color: #1f2937;
+    }
+    
+    .company-actions {
+      display: flex;
+      gap: 3px;
+      flex-wrap: nowrap;
+      justify-content: center;
+    }
+    
+    .btn-compact {
+      padding: 5px 10px;
+      font-size: 0.7rem;
+      border-radius: 14px;
+      text-decoration: none;
+      border: none;
+      cursor: pointer;
+      transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+      font-weight: 600;
+      position: relative;
+      overflow: hidden;
+      flex: 1;
+      text-align: center;
+      min-width: 0;
+      white-space: nowrap;
+    }
+    
+    .btn-compact::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+      transition: left 0.5s;
+    }
+    
+    .btn-compact:hover::before {
+      left: 100%;
+    }
+    
+    .btn-data {
+      background: linear-gradient(135deg, #10b981 0%, #34d399 100%);
+      color: white;
+      box-shadow: 0 4px 15px rgba(16, 185, 129, 0.4);
+    }
+    
+    .btn-data:hover {
+      background: linear-gradient(135deg, #059669 0%, #10b981 100%);
+      box-shadow: 0 8px 25px rgba(16, 185, 129, 0.6);
+      transform: translateY(-2px);
+    }
+    
+    .btn-analytics {
+      background: linear-gradient(135deg, #3b82f6 0%, #6366f1 100%);
+      color: white;
+      box-shadow: 0 4px 15px rgba(59, 130, 246, 0.4);
+    }
+    
+    .btn-analytics:hover {
+      background: linear-gradient(135deg, #2563eb 0%, #4f46e5 100%);
+      box-shadow: 0 8px 25px rgba(59, 130, 246, 0.6);
+      transform: translateY(-2px);
+    }
+
+    .btn-report {
+      background: linear-gradient(135deg, #9f7aea 0%, #a78bfa 100%);
+      color: white;
+      box-shadow: 0 4px 15px rgba(159, 122, 234, 0.4);
+    }
+    
+    .btn-report:hover {
+      background: linear-gradient(135deg, #8b5cf6 0%, #9333ea 100%);
+      box-shadow: 0 8px 25px rgba(159, 122, 234, 0.6);
+      transform: translateY(-2px);
+    }
+
+    .btn-edit {
+      background: linear-gradient(135deg, #f59e0b 0%, #f97316 100%);
+      color: white;
+      box-shadow: 0 4px 15px rgba(245, 158, 11, 0.4);
+    }
+    
+    .btn-edit:hover {
+      background: linear-gradient(135deg, #d97706 0%, #ea580c 100%);
+      box-shadow: 0 8px 25px rgba(245, 158, 11, 0.6);
+      transform: translateY(-2px);
+    }
+    
+    .empty-state {
+      text-align: center;
+      padding: 60px 20px;
+      color: #6b7280;
+    }
+    
+    .empty-icon {
+      font-size: 4rem;
+      margin-bottom: 20px;
+    }
+    
+    .empty-title {
+      font-size: 1.5rem;
+      margin-bottom: 10px;
+      color: #1f2937;
+    }
+    
+    .empty-description {
+      font-size: 1rem;
+      margin-bottom: 30px;
+    }
+    
+    .system-management {
+      background: linear-gradient(135deg, #ffffff 0%, #f0f9ff 100%);
+      border-radius: 20px;
+      padding: 32px;
+      text-align: center;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+      border: 1px solid rgba(102, 126, 234, 0.1);
+    }
+    
+    .management-title {
+      font-size: 1.3rem;
+      margin-bottom: 15px;
+      color: #1f2937;
+    }
+    
+    .management-buttons {
+      display: flex;
+      gap: 12px;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="hero-section">
+      <h1 class="hero-title">SNS運用代行管理システム</h1>
+      <p class="hero-subtitle">クライアント企業の選択</p>
+      
+      <!-- メインナビゲーションボタン -->
+      <div class="main-navigation" style="margin-top: 30px; display: flex; gap: 15px; justify-content: center; flex-wrap: wrap;">
+        <a href="/companies/add" class="btn btn-primary" style="padding: 12px 24px; font-size: 1rem;">🏢 新規企業登録</a>
+        <a href="/companies" class="btn btn-info" style="padding: 12px 24px; font-size: 1rem;">📋 クライアント管理</a>
+      </div>
+    </div>
+    
+    <main>
+      <div class="companies-section">
+        <div class="section-header">
+          <h2 class="section-title">クライアント企業</h2>
+        </div>
+        
+        <% if (companies && companies.length > 0) { %>
+          <div class="company-grid">
+            <% companies.forEach(company => { %>
+              <div class="company-card" onclick="window.location.href='/companies/<%= company.id %>'">
+                <div class="company-name"><%= company.company_name %></div>
+                <div class="company-industry"><%= company.industry %></div>
+                
+                <div class="company-details">
+                  <div class="detail-row">
+                    <span class="detail-label">運用開始</span>
+                    <span class="detail-value"><%= company.start_date %></span>
+                  </div>
+                  <div class="detail-row">
+                    <span class="detail-label">開始時フォロワー</span>
+                    <span class="detail-value"><%= company.initial_followers.toLocaleString() %></span>
+                  </div>
+                  <div class="detail-row">
+                    <span class="detail-label">ID</span>
+                    <span class="detail-value"><%= company.id %></span>
+                  </div>
+                </div>
+                
+                <div class="company-actions" onclick="event.stopPropagation()">
+                  <a href="/add-post-grid?company=<%= company.id %>" class="btn-compact btn-data">📊 データ入力</a>
+                  <a href="/analytics?company=<%= company.id %>" class="btn-compact btn-analytics">📈 分析</a>
+                  <a href="/report/<%= company.id %>" class="btn-compact btn-report">📋 レポート</a>
+                  <a href="/companies/edit/<%= company.id %>" class="btn-compact btn-edit">✏️ 編集</a>
+                </div>
+              </div>
+            <% }); %>
+          </div>
+        <% } else { %>
+          <div class="empty-state">
+            <div class="empty-icon">🏢</div>
+            <h3 class="empty-title">登録されたクライアントがありません</h3>
+            <p class="empty-description">
+              まずはSNS運用代行を行うクライアント企業の情報を登録してください。<br>
+              企業情報にはSNS運用開始日や開始時のフォロワー数などを記録できます。
+            </p>
+            <a href="/companies/add" class="btn btn-primary btn-large">最初のクライアントを登録する</a>
+          </div>
+        <% } %>
+      </div>
+    </main>
+  </div>
+
+</body>
+</html>

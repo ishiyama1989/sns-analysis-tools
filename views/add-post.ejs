@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>投稿データ入力 - Instagram運用分析</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>投稿データ入力</h1>
+      <nav>
+        <a href="/" class="btn btn-link">ホーム</a>
+        <a href="/posts" class="btn btn-link">投稿一覧</a>
+      </nav>
+    </header>
+    
+    <main>
+      <form class="post-form" action="/add-post" method="POST">
+        <div class="form-section">
+          <h2>基本情報</h2>
+          
+          <div class="form-group">
+            <label for="post_date">投稿日</label>
+            <input type="date" id="post_date" name="post_date" required>
+          </div>
+          
+          <div class="form-group">
+            <label for="post_time">投稿時間</label>
+            <input type="time" id="post_time" name="post_time" required>
+          </div>
+          
+          <div class="form-group">
+            <label for="post_type">投稿タイプ</label>
+            <select id="post_type" name="post_type" required>
+              <option value="">選択してください</option>
+              <option value="image">画像投稿</option>
+              <option value="reel">リール</option>
+              <option value="story">ストーリーズ</option>
+            </select>
+          </div>
+          
+          <div class="form-group">
+            <label for="caption">キャプション</label>
+            <textarea id="caption" name="caption" rows="3" placeholder="投稿のキャプションを入力"></textarea>
+          </div>
+          
+          <div class="form-group">
+            <label for="hashtags">ハッシュタグ</label>
+            <textarea id="hashtags" name="hashtags" rows="2" placeholder="#example #instagram #marketing"></textarea>
+          </div>
+        </div>
+        
+        <div class="form-section">
+          <h2>パフォーマンスデータ</h2>
+          
+          <div class="form-group">
+            <label for="likes">いいね数</label>
+            <input type="number" id="likes" name="likes" min="0" placeholder="0">
+          </div>
+          
+          <div class="form-group">
+            <label for="comments">コメント数</label>
+            <input type="number" id="comments" name="comments" min="0" placeholder="0">
+          </div>
+          
+          <div class="form-group">
+            <label for="saves">保存数</label>
+            <input type="number" id="saves" name="saves" min="0" placeholder="0">
+          </div>
+          
+          <div class="form-group">
+            <label for="reach">リーチ数</label>
+            <input type="number" id="reach" name="reach" min="0" placeholder="0">
+            <small>分からない場合は空欄で構いません</small>
+          </div>
+          
+          <div class="form-group">
+            <label for="impressions">インプレッション数</label>
+            <input type="number" id="impressions" name="impressions" min="0" placeholder="0">
+            <small>分からない場合は空欄で構いません</small>
+          </div>
+        </div>
+        
+        <div class="form-actions">
+          <button type="submit" class="btn btn-primary">データを保存</button>
+          <a href="/posts" class="btn btn-secondary">キャンセル</a>
+        </div>
+      </form>
+    </main>
+  </div>
+</body>
+</html>

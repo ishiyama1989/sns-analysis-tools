@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title><%= title || 'Instagram運用分析システム' %></title>
+  <link rel="stylesheet" href="/style.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>Instagram運用分析システム</h1>
+      <nav>
+        <a href="/" class="btn btn-link">ホーム</a>
+        <a href="/posts" class="btn btn-link">投稿一覧</a>
+        <a href="/add-post" class="btn btn-link">投稿追加</a>
+        <a href="/goals" class="btn btn-link">目標設定</a>
+        <a href="/analytics" class="btn btn-link">分析</a>
+      </nav>
+    </header>
+    
+    <%- body %>
+  </div>
+</body>
+</html>
